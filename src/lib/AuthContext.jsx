@@ -86,7 +86,7 @@ export function AuthProvider({ children }) {
   }
 
   const isAdmin        = ranger?.is_admin === true
-  const canEditOrg     = ['commandant','lieutenant'].includes(ranger?.grade)
+  const canEditOrg     = ranger?.is_admin === true || ['commandant','lieutenant'].includes(ranger?.grade)
 
   return (
     <AuthContext.Provider value={{ session, ranger, loading, signIn, signUp, signOut, refreshRanger, isAdmin, canEditOrg }}>

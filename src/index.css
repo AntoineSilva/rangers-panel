@@ -78,10 +78,11 @@ body::before {
   background:rgba(0,0,0,0.82);
   z-index:8000;          /* au-dessus du header sticky (z-index:500) */
   display:flex;
-  align-items:flex-start;
+
   justify-content:center;
-  padding:60px 16px 30px;
+  padding:16px;
   overflow-y:auto;
+  align-items:center;
 }
 .modal-box {
   background:var(--paper);
@@ -94,6 +95,8 @@ body::before {
   width:100%;
   max-width:600px;
   box-shadow:0 20px 60px rgba(0,0,0,.85);
+  max-height:88vh;
+  overflow-y:auto;
   animation:pageIn .2s ease both;
   /* PAS de max-height ici — le scroll est sur l'overlay */
 }
@@ -226,7 +229,7 @@ body::before {
   .hole{left:11px}
   .two-col,.three-col{grid-template-columns:1fr}
   .info-grid{grid-template-columns:1fr 1fr}
-  .modal-overlay{padding:40px 10px 20px}
+  .modal-overlay{padding:10px}
   .modal-box{padding:20px 14px 22px 32px}
   .modal-box::before{left:20px}
 }
