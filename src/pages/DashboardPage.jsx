@@ -15,7 +15,8 @@ const TABS = [
 ]
 
 export default function DashboardPage() {
-  const { ranger, signOut, isOfficier } = useAuth()
+  const { ranger, signOut } = useAuth()
+  const isOfficier = true
   const snd = useTypewriterSound()
   const [activeTab, setActiveTab] = useState('accueil')
 
