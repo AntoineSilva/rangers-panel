@@ -1,25 +1,33 @@
-import { useRef } from 'react'
+import { useRef, useEffect } from 'react'
+
+// Hook singleton — un seul AudioContext partagé
+let sharedAC = null
+let pitchCounter = 0
+
+function getAC() {
+  if (!sharedAC) sharedAC = new (window.AudioContext || window.webkitAudioContext)()
+  return sharedAC
+}
 
 export function useTypewriterSound() {
-  const acRef    = useRef(null)
-  const pitchIdx = useRef(0)
-
-  function getAC() {
-    if (!acRef.current)
-      acRef.current = new (window.AudioContext || window.webkitAudioContext)()
-    return acRef.current
-  }
+  // Débloquer l'audio dès la première interaction
+  useEffect(() => {
+    const unlock = () => { try { getAC() } catch(e){} }
+    document.addEventListener('click',      unlock, { once: true })
+    document.addEventListener('keydown',    unlock, { once: true })
+    document.addEventListener('touchstart', unlock, { once: true })
+  }, [])
 
   function keyClick() {
     try {
       const c   = getAC()
       const t   = c.currentTime + 0.001
       const pitches = [1.0,0.97,1.03,0.95,1.05,0.98,1.02,0.96]
-      const pv  = pitches[pitchIdx.current % pitches.length]
-      pitchIdx.current++
+      const pv  = pitches[pitchCounter % pitches.length]
+      pitchCounter++
       const vol = 0.28 + Math.random() * 0.14
 
-      // Impact marteau sur papier
+      // Impact marteau
       const len1 = Math.floor(c.sampleRate * 0.009)
       const buf1 = c.createBuffer(1, len1, c.sampleRate)
       const d1   = buf1.getChannelData(0)
@@ -50,7 +58,6 @@ export function useTypewriterSound() {
   function ding() {
     try {
       const c=getAC(); const t=c.currentTime+0.001
-      // Tink initial
       const len=Math.floor(c.sampleRate*0.004)
       const buf=c.createBuffer(1,len,c.sampleRate)
       const d=buf.getChannelData(0)
@@ -59,7 +66,6 @@ export function useTypewriterSound() {
       const hp=c.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=6000
       const g=c.createGain(); g.gain.setValueAtTime(0.4,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.008)
       s.connect(hp); hp.connect(g); g.connect(c.destination); s.start(t)
-      // Partiels cloche
       [[1760,0.30,1.6],[2637,0.14,1.0],[3520,0.07,0.6],[5274,0.03,0.3]].forEach(([f,a,decay])=>{
         const o=c.createOscillator(); o.type='sine'; o.frequency.value=f
         const gg=c.createGain()
@@ -69,11 +75,9 @@ export function useTypewriterSound() {
     } catch(e){}
   }
 
-  // Retour chariot = même son que keyClick mais plus fort et plus grave
   function carriageReturn() {
     try {
       const c=getAC(); const t=c.currentTime+0.001
-      // Choc
       const len=Math.floor(c.sampleRate*0.055)
       const buf=c.createBuffer(1,len,c.sampleRate)
       const d=buf.getChannelData(0)
@@ -82,7 +86,6 @@ export function useTypewriterSound() {
       const lp=c.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=2500
       const g=c.createGain(); g.gain.value=0.75
       s.connect(lp); lp.connect(g); g.connect(c.destination); s.start(t)
-      // Glissement
       const len2=Math.floor(c.sampleRate*0.20)
       const buf2=c.createBuffer(1,len2,c.sampleRate)
       const d2=buf2.getChannelData(0)
@@ -91,7 +94,6 @@ export function useTypewriterSound() {
       const bp2=c.createBiquadFilter(); bp2.type='bandpass'; bp2.frequency.value=550; bp2.Q.value=0.4
       const g2=c.createGain(); g2.gain.value=0.55
       s2.connect(bp2); bp2.connect(g2); g2.connect(c.destination); s2.start(t+0.03)
-      // Clac arrêt
       const len3=Math.floor(c.sampleRate*0.030)
       const buf3=c.createBuffer(1,len3,c.sampleRate)
       const d3=buf3.getChannelData(0)
@@ -99,7 +101,6 @@ export function useTypewriterSound() {
       const s3=c.createBufferSource(); s3.buffer=buf3
       const g3=c.createGain(); g3.gain.value=0.6
       s3.connect(g3); g3.connect(c.destination); s3.start(t+0.25)
-      // Cliquets rouleau
       for(let i=0;i<4;i++){
         const len4=Math.floor(c.sampleRate*0.005)
         const buf4=c.createBuffer(1,len4,c.sampleRate)
@@ -124,17 +125,15 @@ export function useTypewriterSound() {
       const lp=c.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=3200
       const g=c.createGain(); g.gain.value=0.7
       s.connect(lp); lp.connect(g); g.connect(c.destination); s.start(t)
-      setTimeout(()=>{
-        try{
-          const len2=Math.floor(c.sampleRate*0.05)
-          const buf2=c.createBuffer(1,len2,c.sampleRate)
-          const d2=buf2.getChannelData(0)
-          for(let i=0;i<len2;i++){const tt=i/c.sampleRate;d2[i]=(Math.random()*2-1)*0.3*Math.exp(-tt/0.008)}
-          const s2=c.createBufferSource(); s2.buffer=buf2
-          const g2=c.createGain(); g2.gain.value=0.35
-          s2.connect(g2); g2.connect(c.destination); s2.start(c.currentTime)
-        }catch(e){}
-      },90)
+      setTimeout(()=>{try{
+        const len2=Math.floor(c.sampleRate*0.05)
+        const buf2=c.createBuffer(1,len2,c.sampleRate)
+        const d2=buf2.getChannelData(0)
+        for(let i=0;i<len2;i++){const tt=i/c.sampleRate;d2[i]=(Math.random()*2-1)*0.3*Math.exp(-tt/0.008)}
+        const s2=c.createBufferSource(); s2.buffer=buf2
+        const g2=c.createGain(); g2.gain.value=0.35
+        s2.connect(g2); g2.connect(c.destination); s2.start(c.currentTime)
+      }catch(e){}},90)
     } catch(e){}
   }
 
