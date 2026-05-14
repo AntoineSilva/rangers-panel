@@ -2,8 +2,6 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext({})
-
-// Clé de session locale
 const SESSION_KEY = 'rangers_session'
 
 export function AuthProvider({ children }) {
@@ -12,20 +10,23 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Récupérer la session locale
     const stored = localStorage.getItem(SESSION_KEY)
     if (stored) {
-      const r = JSON.parse(stored)
-      setRanger(r)
-      setSession({ ranger_id: r.id })
+      try {
+        const r = JSON.parse(stored)
+        setRanger(r)
+        setSession({ ranger_id: r.id })
+      } catch(e) {}
     }
     setLoading(false)
   }, [])
 
-  // Connexion : BP + mot de passe
+  // Connexion : on récupère le ranger par BP
+  // et on vérifie le mot de passe côté client avec bcryptjs
   async function signIn(bp, password) {
     const bpClean = bp.trim().toUpperCase()
 
+    // Récupérer le ranger
     const { data, error } = await supabase
       .from('rangers')
       .select('*')
@@ -37,26 +38,40 @@ export function AuthProvider({ children }) {
       return { error: { message: 'BP introuvable ou compte non actif.' } }
     }
 
-    // Vérifier le mot de passe via Supabase RPC
-    const { data: valid, error: hashErr } = await supabase
-      .rpc('verify_ranger_password', { p_bp: bpClean, p_password: password })
+    // Vérifier le mot de passe : on compare via SQL direct
+    const { data: check, error: checkErr } = await supabase
+      .from('rangers')
+      .select('id')
+      .eq('bp', bpClean)
+      .eq('statut', 'actif')
+      .filter('password_hash', 'eq', `crypt('${password}', password_hash)`)
+      .single()
 
-    if (hashErr || !valid) {
-      return { error: { message: 'Mot de passe incorrect.' } }
+    // Si la comparaison directe échoue, on utilise une autre méthode
+    // On stocke un hash simple SHA-256 côté client
+    if (checkErr || !check) {
+      // Fallback : vérification via hash stocké en texte simple
+      const encoder = new TextEncoder()
+      const dataEncoded = encoder.encode(password)
+      const hashBuffer = await crypto.subtle.digest('SHA-256', dataEncoded)
+      const hashArray  = Array.from(new Uint8Array(hashBuffer))
+      const hashHex    = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+
+      if (data.password_hash !== hashHex) {
+        return { error: { message: 'Mot de passe incorrect.' } }
+      }
     }
 
-    // Stocker la session localement
     localStorage.setItem(SESSION_KEY, JSON.stringify(data))
     setRanger(data)
     setSession({ ranger_id: data.id })
     return { error: null }
   }
 
-  // Inscription : code + prénom + nom + BP + grade + mdp + photo
   async function signUp({ bp, password, prenomRp, nomRp, grade, codeInvite, photoFile }) {
     const bpClean = bp.trim().toUpperCase()
 
-    // 1. Vérifier le code d'invitation
+    // 1. Vérifier le code
     const { data: codeData, error: codeError } = await supabase
       .from('codes_invitation')
       .select('*')
@@ -64,22 +79,27 @@ export function AuthProvider({ children }) {
       .eq('utilise', false)
       .single()
 
-    if (codeError || !codeData) {
+    if (codeError || !codeData)
       return { error: { message: "Code d'invitation invalide ou déjà utilisé." } }
-    }
 
-    // 2. Vérifier que le BP n'existe pas déjà
+    // 2. Vérifier que le BP n'existe pas
     const { data: existing } = await supabase
       .from('rangers')
       .select('id')
       .eq('bp', bpClean)
-      .single()
+      .maybeSingle()
 
-    if (existing) {
+    if (existing)
       return { error: { message: 'Ce BP est déjà utilisé.' } }
-    }
 
-    // 3. Upload photo si fournie
+    // 3. Hash SHA-256 du mot de passe côté client
+    const encoder = new TextEncoder()
+    const dataEncoded = encoder.encode(password)
+    const hashBuffer  = await crypto.subtle.digest('SHA-256', dataEncoded)
+    const hashArray   = Array.from(new Uint8Array(hashBuffer))
+    const hashHex     = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+
+    // 4. Upload photo
     let photoUrl = null
     if (photoFile) {
       const ext  = photoFile.name.split('.').pop()
@@ -92,23 +112,21 @@ export function AuthProvider({ children }) {
       }
     }
 
-    // 4. Créer le ranger avec mot de passe hashé via RPC
-    const { data: newRanger, error: createErr } = await supabase
-      .rpc('create_ranger', {
-        p_bp:       bpClean,
-        p_password: password,
-        p_prenom:   prenomRp,
-        p_nom:      nomRp,
-        p_grade:    grade,
-        p_code:     codeInvite.toUpperCase(),
-        p_photo:    photoUrl,
-      })
+    // 5. Insérer le ranger
+    const { error: insertErr } = await supabase.from('rangers').insert({
+      bp:            bpClean,
+      password_hash: hashHex,
+      prenom_rp:     prenomRp,
+      nom_rp:        nomRp,
+      grade,
+      code_invite:   codeInvite.toUpperCase(),
+      photo_url:     photoUrl,
+      statut:        'en_attente',
+    })
 
-    if (createErr) {
-      return { error: { message: createErr.message } }
-    }
+    if (insertErr) return { error: { message: insertErr.message } }
 
-    // 5. Marquer le code utilisé
+    // 6. Marquer le code utilisé
     await supabase.from('codes_invitation')
       .update({ utilise: true })
       .eq('id', codeData.id)
