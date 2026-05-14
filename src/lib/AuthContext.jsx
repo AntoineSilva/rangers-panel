@@ -21,130 +21,75 @@ export function AuthProvider({ children }) {
     setLoading(false)
   }, [])
 
-  // Connexion : on récupère le ranger par BP
-  // et on vérifie le mot de passe côté client avec bcryptjs
   async function signIn(bp, password) {
     const bpClean = bp.trim().toUpperCase()
-
-    // Récupérer le ranger
     const { data, error } = await supabase
-      .from('rangers')
-      .select('*')
-      .eq('bp', bpClean)
-      .eq('statut', 'actif')
-      .single()
+      .from('rangers').select('*').eq('bp', bpClean).eq('statut', 'actif').single()
+    if (error || !data) return { error: { message: 'BP introuvable ou compte non actif.' } }
 
-    if (error || !data) {
-      return { error: { message: 'BP introuvable ou compte non actif.' } }
-    }
+    const encoder    = new TextEncoder()
+    const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(password))
+    const hashHex    = Array.from(new Uint8Array(hashBuffer)).map(b=>b.toString(16).padStart(2,'0')).join('')
 
-    // Vérifier le mot de passe : on compare via SQL direct
-    const { data: check, error: checkErr } = await supabase
-      .from('rangers')
-      .select('id')
-      .eq('bp', bpClean)
-      .eq('statut', 'actif')
-      .filter('password_hash', 'eq', `crypt('${password}', password_hash)`)
-      .single()
-
-    // Si la comparaison directe échoue, on utilise une autre méthode
-    // On stocke un hash simple SHA-256 côté client
-    if (checkErr || !check) {
-      // Fallback : vérification via hash stocké en texte simple
-      const encoder = new TextEncoder()
-      const dataEncoded = encoder.encode(password)
-      const hashBuffer = await crypto.subtle.digest('SHA-256', dataEncoded)
-      const hashArray  = Array.from(new Uint8Array(hashBuffer))
-      const hashHex    = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-
-      if (data.password_hash !== hashHex) {
-        return { error: { message: 'Mot de passe incorrect.' } }
-      }
-    }
+    if (data.password_hash !== hashHex) return { error: { message: 'Mot de passe incorrect.' } }
 
     localStorage.setItem(SESSION_KEY, JSON.stringify(data))
-    setRanger(data)
-    setSession({ ranger_id: data.id })
+    setRanger(data); setSession({ ranger_id: data.id })
     return { error: null }
   }
 
   async function signUp({ bp, password, prenomRp, nomRp, grade, codeInvite, photoFile }) {
     const bpClean = bp.trim().toUpperCase()
-
-    // 1. Vérifier le code
     const { data: codeData, error: codeError } = await supabase
-      .from('codes_invitation')
-      .select('*')
-      .eq('code', codeInvite.toUpperCase())
-      .eq('utilise', false)
-      .single()
+      .from('codes_invitation').select('*').eq('code', codeInvite.toUpperCase()).eq('utilise', false).single()
+    if (codeError || !codeData) return { error: { message: "Code d'invitation invalide ou déjà utilisé." } }
 
-    if (codeError || !codeData)
-      return { error: { message: "Code d'invitation invalide ou déjà utilisé." } }
+    const { data: existing } = await supabase.from('rangers').select('id').eq('bp', bpClean).maybeSingle()
+    if (existing) return { error: { message: 'Ce BP est déjà utilisé.' } }
 
-    // 2. Vérifier que le BP n'existe pas
-    const { data: existing } = await supabase
-      .from('rangers')
-      .select('id')
-      .eq('bp', bpClean)
-      .maybeSingle()
+    const encoder    = new TextEncoder()
+    const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(password))
+    const hashHex    = Array.from(new Uint8Array(hashBuffer)).map(b=>b.toString(16).padStart(2,'0')).join('')
 
-    if (existing)
-      return { error: { message: 'Ce BP est déjà utilisé.' } }
-
-    // 3. Hash SHA-256 du mot de passe côté client
-    const encoder = new TextEncoder()
-    const dataEncoded = encoder.encode(password)
-    const hashBuffer  = await crypto.subtle.digest('SHA-256', dataEncoded)
-    const hashArray   = Array.from(new Uint8Array(hashBuffer))
-    const hashHex     = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-
-    // 4. Upload photo
     let photoUrl = null
     if (photoFile) {
       const ext  = photoFile.name.split('.').pop()
       const path = `rangers/${bpClean}.${ext}`
-      const { error: upErr } = await supabase.storage
-        .from('photos').upload(path, photoFile, { upsert: true })
+      const { error: upErr } = await supabase.storage.from('photos').upload(path, photoFile, { upsert: true })
       if (!upErr) {
         const { data: urlData } = supabase.storage.from('photos').getPublicUrl(path)
         photoUrl = urlData.publicUrl
       }
     }
 
-    // 5. Insérer le ranger
     const { error: insertErr } = await supabase.from('rangers').insert({
-      bp:            bpClean,
-      password_hash: hashHex,
-      prenom_rp:     prenomRp,
-      nom_rp:        nomRp,
-      grade,
-      code_invite:   codeInvite.toUpperCase(),
-      photo_url:     photoUrl,
-      statut:        'en_attente',
+      bp: bpClean, password_hash: hashHex,
+      prenom_rp: prenomRp, nom_rp: nomRp,
+      grade, code_invite: codeInvite.toUpperCase(),
+      photo_url: photoUrl, statut: 'en_attente', is_admin: false,
     })
-
     if (insertErr) return { error: { message: insertErr.message } }
 
-    // 6. Marquer le code utilisé
-    await supabase.from('codes_invitation')
-      .update({ utilise: true })
-      .eq('id', codeData.id)
-
+    await supabase.from('codes_invitation').update({ utilise: true }).eq('id', codeData.id)
     return { error: null }
+  }
+
+  async function refreshRanger() {
+    if (!ranger?.id) return
+    const { data } = await supabase.from('rangers').select('*').eq('id', ranger.id).single()
+    if (data) { setRanger(data); localStorage.setItem(SESSION_KEY, JSON.stringify(data)) }
   }
 
   function signOut() {
     localStorage.removeItem(SESSION_KEY)
-    setRanger(null)
-    setSession(null)
+    setRanger(null); setSession(null)
   }
 
-  const isOfficier     = ['commandant','lieutenant'].includes(ranger?.grade)
-  const isSousOfficier = ['commandant','lieutenant','sergent'].includes(ranger?.grade)
+  const isAdmin        = ranger?.is_admin === true
+  const canEditOrg     = ['commandant','lieutenant'].includes(ranger?.grade)
 
   return (
-    <AuthContext.Provider value={{ session, ranger, loading, signIn, signUp, signOut, isOfficier, isSousOfficier }}>
+    <AuthContext.Provider value={{ session, ranger, loading, signIn, signUp, signOut, refreshRanger, isAdmin, canEditOrg }}>
       {children}
     </AuthContext.Provider>
   )
