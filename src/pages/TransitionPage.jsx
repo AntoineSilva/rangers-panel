@@ -95,7 +95,7 @@ export default function TransitionPage({ onDone }) {
     if (!ranger) return
     const fullName = `${ranger.prenom_rp.toUpperCase()}  ${ranger.nom_rp.toUpperCase()}`
     const grade = `— ${ranger.grade.toUpperCase()} —`
-    const bureau = ranger.pole || 'U.S. Rangers'
+    const bureau = ranger.pole || 'West Elizabeth'
 
     async function sequence() {
       await sleep(800)

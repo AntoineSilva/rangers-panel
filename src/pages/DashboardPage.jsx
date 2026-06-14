@@ -104,7 +104,7 @@ export default function DashboardPage() {
           <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
             <span style={{fontSize:'16px',filter:'sepia(1) brightness(.6)'}}>⭐</span>
             <div>
-              <div style={{fontFamily:"'Special Elite',cursive",fontSize:'11px',letterSpacing:'4px',color:'var(--chrome)',textTransform:'uppercase'}}>U.S. Rangers</div>
+              <div style={{fontFamily:"'Special Elite',cursive",fontSize:'11px',letterSpacing:'4px',color:'var(--chrome)',textTransform:'uppercase'}}>West Elizabeth</div>
               <div style={{fontSize:'8px',letterSpacing:'3px',color:'rgba(180,150,100,.4)',textTransform:'uppercase'}}>Bureau de Blackwater</div>
             </div>
           </div>
@@ -180,11 +180,11 @@ function TabAccueil({ranger,switchTab}){
   const now=new Date()
   return(
     <div className="page-in">
-      <PageHeader title="Tableau de Bord" sub="U.S. Rangers — Bureau de West Elizabeth">
+      <PageHeader title="Tableau de Bord" sub="Bureau de West Elizabeth — 1905">
         <div style={{textAlign:'right',fontSize:'9px',letterSpacing:'2px',color:'var(--ink-3)',lineHeight:'1.7'}}>{String(now.getDate()).padStart(2,'0')}/{String(now.getMonth()+1).padStart(2,'0')}/{now.getFullYear()}</div>
       </PageHeader>
       <div className="info-grid">
-        <StatCard label="Effectif actif" value={stats.rangers} sub="Rangers"/>
+        <StatCard label="Effectif actif" value={stats.rangers} sub="Agents"/>
         <StatCard label="Armes volées" value={stats.volees} sub={stats.volees>0?'En investigation':'RAS'} accent={stats.volees>0?'red':''}/>
         <StatCard label="Solde Bureau" value={`${stats.solde.toFixed(2)} $`} sub="Trésorerie" accent="green" small/>
         <StatCard label="Enquêtes actives" value={stats.enquetes} sub="En cours / En traque" accent={stats.enquetes>0?'orange':''}/>
@@ -192,7 +192,7 @@ function TabAccueil({ranger,switchTab}){
       <div className="ornament">★ Message du Commandement ★</div>
       <div style={{borderLeft:'3px solid var(--ink-3)',padding:'10px 14px',background:'rgba(180,150,80,.06)',fontSize:'13px',lineHeight:'28px',color:'var(--ink-2)',fontStyle:'italic'}}>
         « Bienvenue, {ranger?.grade} {ranger?.prenom_rp} {ranger?.nom_rp}. Que la justice guide votre main. »
-        <div style={{marginTop:'6px',fontSize:'9px',letterSpacing:'2px',color:'var(--ink-3)',fontStyle:'normal'}}>— Le Commandant, West Elizabeth · 1899</div>
+        <div style={{marginTop:'6px',fontSize:'9px',letterSpacing:'2px',color:'var(--ink-3)',fontStyle:'normal'}}>— Le Commandant, West Elizabeth · 1905</div>
       </div>
       <div style={{marginTop:'16px',display:'flex',gap:'8px',flexWrap:'wrap'}}>
         <button className="btn btn-primary btn-sm" onClick={()=>switchTab('enquetes')}>🔍 Enquêtes</button>
@@ -467,9 +467,24 @@ function TabOrganigramme({canEdit,snd}){
         )}
 
         {/* Deputies */}
+        {byGrade('confirme').length>0&&(
+          <><VLine/>
+          <div style={{fontSize:'8px',letterSpacing:'2px',textTransform:'uppercase',color:'var(--ink-3)',margin:'3px 0 6px',borderBottom:'1px solid rgba(26,58,106,.3)',paddingBottom:'2px',minWidth:'160px',textAlign:'center'}}>Confirmés</div>
+          <div style={{display:'flex',flexWrap:'wrap',gap:'5px',justifyContent:'center'}}>
+            {byGrade('confirme').map(r=>(
+              <div key={r.id} onClick={canEdit?()=>openEdit(r):null}
+                style={{fontSize:'11px',color:'var(--ink-2)',padding:'3px 9px',border:'1px solid rgba(26,58,106,.3)',minWidth:'110px',textAlign:'center',cursor:canEdit?'pointer':'default',fontFamily:"'Special Elite',cursive",transition:'all .15s'}}
+                onMouseEnter={e=>canEdit&&(e.currentTarget.style.background='rgba(26,58,106,.1)')}
+                onMouseLeave={e=>canEdit&&(e.currentTarget.style.background='')}>
+                {r.prenom_rp} {r.nom_rp}
+                {r.role_special&&<span style={{fontSize:'8px',color:'var(--ink-3)',display:'block'}}>{r.role_special}</span>}
+              </div>
+            ))}
+          </div></>
+        )}
         {byGrade('deputy').length>0&&(
           <><VLine/>
-          <div style={{fontSize:'8px',letterSpacing:'2px',textTransform:'uppercase',color:'var(--ink-3)',margin:'3px 0 6px',borderBottom:'1px solid rgba(106,74,26,.3)',paddingBottom:'2px',minWidth:'160px',textAlign:'center'}}>Deputies</div>
+          <div style={{fontSize:'8px',letterSpacing:'2px',textTransform:'uppercase',color:'var(--ink-3)',margin:'3px 0 6px',borderBottom:'1px solid rgba(26,58,106,.3)',paddingBottom:'2px',minWidth:'160px',textAlign:'center'}}>Deputies</div>
           <div style={{display:'flex',flexWrap:'wrap',gap:'5px',justifyContent:'center'}}>
             {byGrade('deputy').map(r=>(
               <div key={r.id} onClick={canEdit?()=>openEdit(r):null}
@@ -507,7 +522,7 @@ function TabLogistique({snd,ranger}){
   const [loading,setLoading]=useState(true)
   const [page,setPage]=useState('list') // 'list'|'add'|'edit'|'mouv'|'histo'
   const [editItem,setEditItem]=useState(null)
-  const [form,setForm]=useState({article:'',categorie:'Papeterie',qte_strawberry:0,qte_blackwater:0,qte_valentine:0,min_blackwater:0})
+  const [form,setForm]=useState({article:'',categorie:'Papeterie',qte_strawberry:0,qte_blackwater:0,qte_valentine:0,min_strawberry:0,min_blackwater:0,min_valentine:0})
   const [mouv,setMouv]=useState({poste:'wallace',type:'ajout',quantite:1})
   const [msg,setMsg]=useState('')
   useEffect(()=>{load()},[])
@@ -518,8 +533,8 @@ function TabLogistique({snd,ranger}){
     ])
     setItems(i||[]);setHisto(h||[]);setLoading(false)
   }
-  function openAdd(){snd.keyClick();setEditItem(null);setForm({article:'',categorie:'Papeterie',qte_strawberry:0,qte_blackwater:0,qte_valentine:0,min_blackwater:0});setMsg('');setPage('add')}
-  function openEdit(item){snd.keyClick();setEditItem(item);setForm({article:item.article,categorie:item.categorie,qte_strawberry:item.qte_strawberry||0,qte_blackwater:item.qte_blackwater||0,qte_valentine:item.qte_valentine||0,min_blackwater:item.min_blackwater||0});setMsg('');setPage('edit')}
+  function openAdd(){snd.keyClick();setEditItem(null);setForm({article:'',categorie:'Papeterie',qte_strawberry:0,qte_blackwater:0,qte_valentine:0,min_strawberry:0,min_blackwater:0,min_valentine:0});setMsg('');setPage('add')}
+  function openEdit(item){snd.keyClick();setEditItem(item);setForm({article:item.article,categorie:item.categorie,qte_strawberry:item.qte_strawberry||0,qte_blackwater:item.qte_blackwater||0,qte_valentine:item.qte_valentine||0,min_strawberry:item.min_strawberry||0,min_blackwater:item.min_blackwater||0,min_valentine:item.min_valentine||0});setMsg('');setPage('edit')}
   function openMouv(item){snd.keyClick();setEditItem(item);setMouv({poste:'wallace',type:'ajout',quantite:1});setMsg('');setPage('mouv')}
   async function save(){
     snd.carriageReturn()
@@ -557,7 +572,11 @@ function TabLogistique({snd,ranger}){
           <Field label="Blackwater"><input type="number" min="0" value={form.qte_blackwater} onChange={e=>{setForm(f=>({...f,qte_blackwater:+e.target.value}));snd.keyClick()}}/></Field>
           <Field label="Valentine"><input type="number" min="0" value={form.qte_valentine} onChange={e=>{setForm(f=>({...f,qte_valentine:+e.target.value}));snd.keyClick()}}/></Field>
         </div>
-        <Field label="Stock min. Blackwater"><input type="number" min="0" value={form.min_blackwater} onChange={e=>{setForm(f=>({...f,min_blackwater:+e.target.value}));snd.keyClick()}}/></Field>
+        <div className="two-col">
+          <Field label="Min. Strawberry"><input type="number" min="0" value={form.min_strawberry} onChange={e=>{setForm(f=>({...f,min_strawberry:+e.target.value}));snd.keyClick()}}/></Field>
+          <Field label="Min. Blackwater"><input type="number" min="0" value={form.min_blackwater} onChange={e=>{setForm(f=>({...f,min_blackwater:+e.target.value}));snd.keyClick()}}/></Field>
+          <Field label="Min. Valentine"><input type="number" min="0" value={form.min_valentine} onChange={e=>{setForm(f=>({...f,min_valentine:+e.target.value}));snd.keyClick()}}/></Field>
+        </div>
         <div className="btn-row"><button className="btn btn-primary" onClick={save}>✓ Enregistrer</button><button className="btn" onClick={()=>setPage('list')}>✕ Annuler</button></div>
       </SlidePage>
     )
@@ -783,7 +802,7 @@ function TabArmes({snd,ranger,isAdmin}){
       <div className="info-grid" style={{gridTemplateColumns:'repeat(3,1fr)'}}>
         <StatCard label="Total" value={armes.length} sub="enregistrées"/>
         <StatCard label="Volées" value={volees} sub={volees>0?'En investigation':'RAS'} accent={volees>0?'red':''}/>
-        <StatCard label="Affectées" value={affectees} sub="à des Rangers"/>
+        <StatCard label="Affectées" value={affectees} sub="à des Agents"/>
       </div>
 
       {loading?<Loader/>:(
@@ -834,6 +853,7 @@ function TabComptes({snd,ranger}){
   const [loading,setLoading]=useState(true)
   const [page,setPage]=useState('list')
   const [type,setType]=useState('ajout')
+  const [filtreSecteur,setFiltreSecteur]=useState('all')
   const [form,setForm]=useState({type_op:'Règlement de facture',autre_precis:'',description:'',nom_prenom:'',montant:''})
   const [msg,setMsg]=useState('')
   useEffect(()=>{load()},[])
@@ -841,7 +861,7 @@ function TabComptes({snd,ranger}){
     const{data}=await supabase.from('comptes').select('*').eq('origine','rangers').order('date_op',{ascending:false}).limit(60).order('date_op',{ascending:false}).limit(60)
     const d=data||[];setOps(d);setSolde(d.reduce((s,r)=>r.operation==='ajout'?s+Number(r.montant):s-Number(r.montant),0));setLoading(false)
   }
-  function openPage(t){snd.keyClick();setType(t);setForm({type_op:'Règlement de facture',autre_precis:'',description:'',nom_prenom:'',montant:''});setMsg('');setPage('form')}
+  function openPage(t){snd.keyClick();setType(t);setForm({type_op:'Règlement de facture',autre_precis:'',description:'',nom_prenom:'',montant:'',secteur:'Blackwater'});setMsg('');setPage('form')}
   async function save(){
     snd.carriageReturn()
     if(!form.montant){setMsg('⚠ Montant requis');return}
@@ -849,7 +869,7 @@ function TabComptes({snd,ranger}){
     const objet=isAutre?(form.autre_precis||'Autre'):(form.description||form.type_op)
     const typePermis=isAutre?(form.autre_precis||'Autre'):form.type_op
     if(!objet){setMsg('⚠ Description requise');return}
-    const{error}=await supabase.from('comptes').insert({objet,nom_prenom:form.nom_prenom||null,type_permis:typePermis,montant:parseFloat(form.montant),operation:type,date_op:new Date().toISOString().split('T')[0],enregistre_par:ranger?.id,enregistre_par_nom:ranger?`${ranger.prenom_rp} ${ranger.nom_rp}`:null,origine:'rangers'})
+    const{error}=await supabase.from('comptes').insert({objet,nom_prenom:form.nom_prenom||null,type_permis:typePermis,montant:parseFloat(form.montant),operation:type,date_op:new Date().toISOString().split('T')[0],enregistre_par:ranger?.id,enregistre_par_nom:ranger?`${ranger.prenom_rp} ${ranger.nom_rp}`:null,secteur:form.secteur||'Blackwater',origine:'rangers'})
     if(error){setMsg('⚠ '+error.message);return}
     snd.ding();await load();setPage('list')
   }
@@ -859,11 +879,20 @@ function TabComptes({snd,ranger}){
     return(
       <SlidePage title={type==='ajout'?'Nouvelle entrée — Ajout de fonds':'Nouvelle sortie — Retrait de fonds'} onClose={()=>setPage('list')}>
         {msg&&<div className={msg.startsWith('⚠')?'msg-error':'msg-success'}>{msg}</div>}
-        <Field label="Type d'opération">
-          <select value={form.type_op} onChange={e=>{setForm(f=>({...f,type_op:e.target.value}));snd.keyClick()}}>
-            {TYPES_OP.map(t=><option key={t}>{t}</option>)}
-          </select>
-        </Field>
+        <div className="two-col">
+          <Field label="Type d'opération">
+            <select value={form.type_op} onChange={e=>{setForm(f=>({...f,type_op:e.target.value}));snd.keyClick()}}>
+              {TYPES_OP.map(t=><option key={t}>{t}</option>)}
+            </select>
+          </Field>
+          <Field label="Secteur">
+            <select value={form.secteur||'Blackwater'} onChange={e=>{setForm(f=>({...f,secteur:e.target.value}));snd.keyClick()}}>
+              <option>Blackwater</option>
+              <option>Strawberry</option>
+              <option>Valentine</option>
+            </select>
+          </Field>
+        </div>
         {form.type_op==='Autre'&&(
           <Field label="Préciser l'opération ★">
             <input type="text" value={form.autre_precis} onChange={e=>{setForm(f=>({...f,autre_precis:e.target.value}));snd.keyClick()}} placeholder="Décrivez l'opération en détail..."/>
@@ -888,10 +917,18 @@ function TabComptes({snd,ranger}){
 
   return(
     <div className="page-in">
-      <PageHeader title="Gestion des Comptes" sub="État financier du Bureau de Blackwater">
-        <div className="btn-row" style={{margin:0,gap:'5px'}}>
-          <button className="btn btn-success btn-sm" onClick={()=>openPage('ajout')}>+ Entrée</button>
-          <button className="btn btn-danger btn-sm" onClick={()=>openPage('retrait')}>− Sortie</button>
+      <PageHeader title="Gestion des Comptes" sub="État financier — West Elizabeth">
+        <div style={{display:'flex',gap:'8px',alignItems:'center',flexWrap:'wrap'}}>
+          <select value={filtreSecteur} onChange={e=>setFiltreSecteur(e.target.value)} style={{fontFamily:"'Special Elite',cursive",fontSize:'9px',letterSpacing:'2px',padding:'4px 8px',border:'1.5px solid rgba(26,58,106,.4)',background:'var(--paper)',color:'var(--blue)',cursor:'pointer'}}>
+            <option value="all">Tous les secteurs</option>
+            <option value="Blackwater">Blackwater</option>
+            <option value="Strawberry">Strawberry</option>
+            <option value="Valentine">Valentine</option>
+          </select>
+          <div className="btn-row" style={{margin:0,gap:'5px'}}>
+            <button className="btn btn-success btn-sm" onClick={()=>openPage('ajout')}>+ Entrée</button>
+            <button className="btn btn-danger btn-sm" onClick={()=>openPage('retrait')}>− Sortie</button>
+          </div>
         </div>
       </PageHeader>
       <div style={{fontFamily:"'Special Elite',cursive",fontSize:'clamp(20px,5vw,34px)',color:'var(--ink)',letterSpacing:'4px',padding:'12px 16px',border:'2px solid var(--ink)',display:'inline-block',position:'relative',marginBottom:'16px'}}>
@@ -899,16 +936,18 @@ function TabComptes({snd,ranger}){
         {solde.toFixed(2)} $
       </div>
       {loading?<Loader/>:(
+        <>
+        {filtreSecteur!=='all'&&<div style={{fontFamily:"'Special Elite',cursive",fontSize:'11px',color:'var(--ink-3)',marginBottom:'8px',fontStyle:'italic'}}>Affichage : secteur {filtreSecteur}</div>}
         <table className="register-table">
-          <thead><tr><th>Date</th><th>Objet</th><th>Nom</th><th>Par</th><th>Type</th><th>Montant</th><th>Op.</th></tr></thead>
+          <thead><tr><th>Date</th><th>Secteur</th><th>Objet</th><th>Nom</th><th>Par</th><th>Montant</th><th>Op.</th></tr></thead>
           <tbody>
-            {ops.map(op=>(
+            {ops.filter(op=>filtreSecteur==='all'||op.secteur===filtreSecteur).map(op=>(
               <tr key={op.id}>
                 <td style={{fontSize:'9px'}}>{new Date(op.date_op).toLocaleDateString('fr-FR')}</td>
+                <td style={{fontSize:'10px'}}><span style={{border:'1px solid rgba(26,58,106,.3)',padding:'1px 5px',fontFamily:"'Special Elite',cursive",fontSize:'8px',letterSpacing:'1px'}}>{op.secteur||'—'}</span></td>
                 <td style={{fontSize:'11px'}}>{op.objet}</td>
                 <td style={{fontSize:'10px'}}>{op.nom_prenom||'—'}</td>
                 <td style={{fontSize:'10px'}}>{op.enregistre_par_nom||'—'}</td>
-                <td style={{fontSize:'10px'}}>{op.type_permis||'—'}</td>
                 <td style={{fontWeight:700}}>{Number(op.montant).toFixed(2)} $</td>
                 <td><span className={`status-badge ${op.operation==='ajout'?'status-ok':'status-vol'}`} style={{border:'1px solid',padding:'1px 5px',fontSize:'9px',fontFamily:"'Special Elite',cursive"}}>{op.operation==='ajout'?'Ajout':'Retrait'}</span></td>
               </tr>
@@ -916,6 +955,7 @@ function TabComptes({snd,ranger}){
             {ops.length===0&&<tr><td colSpan="7" style={{textAlign:'center',fontStyle:'italic',color:'var(--ink-3)',padding:'16px'}}>Aucune opération.</td></tr>}
           </tbody>
         </table>
+        </>
       )}
     </div>
   )
@@ -950,10 +990,10 @@ function TabRapports({ranger,snd}){
               {['Déposition','Rapport d\'intervention','Rapport de patrouille','Rapport d\'incident','Note interne'].map(t=><option key={t}>{t}</option>)}
             </select>
           </Field>
-          <Field label="Date des faits"><input type="text" placeholder="14/04/1899 — 20h00" value={form.date_faits} onChange={e=>{setForm(f=>({...f,date_faits:e.target.value}));snd.keyClick()}}/></Field>
+          <Field label="Date des faits"><input type="text" placeholder="14/04/1905 — 20h00" value={form.date_faits} onChange={e=>{setForm(f=>({...f,date_faits:e.target.value}));snd.keyClick()}}/></Field>
         </div>
         <div className="two-col">
-          <Field label="Destinataires (séparés par ·)"><input type="text" placeholder="U.S. Rangers · U.S. Marshals" value={form.destinataires} onChange={e=>{setForm(f=>({...f,destinataires:e.target.value}));snd.keyClick()}}/></Field>
+          <Field label="Destinataires (séparés par ·)"><input type="text" placeholder="Bureau West Elizabeth · U.S. Marshals" value={form.destinataires} onChange={e=>{setForm(f=>({...f,destinataires:e.target.value}));snd.keyClick()}}/></Field>
           <Field label="Comtés (séparés par ·)"><input type="text" placeholder="West Elizabeth · Tall Trees" value={form.comtes} onChange={e=>{setForm(f=>({...f,comtes:e.target.value}));snd.keyClick()}}/></Field>
         </div>
         <Field label="Contenu de la déposition ★">
@@ -1362,7 +1402,7 @@ function TabAdmin({isAdmin,currentRanger,snd}){
         </div>
       ))}
 
-      <div className="section-title">✓ Rangers actifs ({actifs.length})</div>
+      <div className="section-title">✓ Agents actifs ({actifs.length})</div>
       <table className="register-table">
         <thead><tr><th>Nom</th><th>BP</th><th>Grade</th><th>Pôle</th><th>Admin</th>{isAdmin&&<th>Actions</th>}</tr></thead>
         <tbody>

@@ -92,7 +92,7 @@ export default function LoginPage() {
 
         {/* Machine */}
         <div style={{ background:'linear-gradient(180deg,#4a3828,#2e1e12,#1e1208)', border:'1px solid #5a4030', borderBottom:'3px solid #150e08', borderRadius:'10px 10px 0 0', height:'28px', display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <span style={{ fontFamily:"'Special Elite',cursive", fontSize:'8px', letterSpacing:'2px', color:'rgba(180,150,100,.45)' }}>— U.S. RANGERS RECORD MACHINE — PATENT No. 1899 —</span>
+          <span style={{ fontFamily:"'Special Elite',cursive", fontSize:'8px', letterSpacing:'2px', color:'rgba(180,150,100,.45)' }}>— U.S. RANGERS RECORD MACHINE — PATENT No. 1905 —</span>
         </div>
         <div style={{ height:'16px', background:'linear-gradient(180deg,#2a1c12,#1a1008)', borderLeft:'1px solid #5a4030', borderRight:'1px solid #5a4030' }} />
 
@@ -138,7 +138,7 @@ export default function LoginPage() {
                     autoComplete="off"
                     style={{ fontSize:'22px', letterSpacing:'8px', textAlign:'center', fontWeight:700 }}
                   />
-                  <div style={{ fontSize:'9px', color:'var(--ink-3)', marginTop:'3px', fontStyle:'italic' }}>* Votre identifiant unique U.S. Rangers</div>
+                  <div style={{ fontSize:'9px', color:'var(--ink-3)', marginTop:'3px', fontStyle:'italic' }}>* Votre identifiant unique West Elizabeth</div>
                 </div>
                 <div className="field-group">
                   <label>Mot de passe</label>
@@ -248,7 +248,7 @@ export default function LoginPage() {
           </div>
 
           <div style={{ marginTop:'16px', textAlign:'center', fontSize:'9px', letterSpacing:'3px', color:'var(--ink-3)', opacity:0.5, textTransform:'uppercase' }}>
-            — United States of America — West Elizabeth — 1899 —
+            — United States of America — West Elizabeth — 1905 —
           </div>
         </div>
 
