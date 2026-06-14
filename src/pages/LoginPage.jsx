@@ -83,7 +83,7 @@ export default function LoginPage() {
         <div style={{ textAlign:'center', marginBottom:'16px' }}>
           <div style={{ color:'rgba(210,185,140,0.3)', letterSpacing:'14px', fontSize:'18px' }}>★ ★ ★ ★ ★</div>
           <h1 style={{ fontFamily:"'Special Elite',cursive", color:'rgba(245,230,195,0.85)', fontSize:'clamp(16px,4vw,24px)', letterSpacing:'6px', textTransform:'uppercase', margin:'4px 0', textShadow:'0 2px 10px rgba(0,0,0,0.8)' }}>
-            United States Rangers
+             United States of America West Elizabeth
           </h1>
           <div style={{ color:'rgba(180,150,100,0.4)', fontSize:'10px', letterSpacing:'4px', textTransform:'uppercase' }}>
             Bureau — Accès Sécurisé — West Elizabeth
