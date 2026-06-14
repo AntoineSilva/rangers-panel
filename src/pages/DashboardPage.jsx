@@ -172,8 +172,8 @@ function TabAccueil({ranger,switchTab}){
         supabase.from('comptes').select('montant,operation'),
         supabase.from('enquetes').select('*',{count:'exact',head:true}).in('statut',['en_cours','en_traque']),
       ])
-      setSolde((c||[]).reduce((s,x)=>x.operation==='ajout'?s+Number(x.montant):s-Number(x.montant),0))
-      setStats({rangers:r||0,volees:v||0,solde:(c||[]).reduce((s,x)=>x.operation==='ajout'?s+Number(x.montant):s-Number(x.montant),0),enquetes:e||0})
+      const soldeCalc=(c||[]).reduce((s,x)=>x.operation==='ajout'?s+Number(x.montant):s-Number(x.montant),0)
+      setStats({rangers:r||0,volees:v||0,solde:soldeCalc,enquetes:e||0})
     }
     load()
   },[])
@@ -677,7 +677,7 @@ function TabArmes({snd,ranger,isAdmin}){
   useEffect(()=>{load()},[])
   async function load(){
     const [{data:a},{data:r}]=await Promise.all([
-      supabase.from('stock_armes').select('*, ranger:affecte_a(prenom_rp,nom_rp)').order('type_arme'),
+      supabase.from('stock_armes').select('*, ranger:affecte_a(prenom_rp,nom_rp)').eq('origine','rangers').order('type_arme'),
       supabase.from('rangers').select('id,prenom_rp,nom_rp').eq('statut','actif'),
     ])
     setArmes(a||[]);setRangers(r||[]);setLoading(false)
@@ -702,6 +702,7 @@ function TabArmes({snd,ranger,isAdmin}){
       emplacement:form.statut==='affectee'?null:form.emplacement,
       statut:form.statut,
       affecte_a:form.statut==='affectee'?form.affecte_a||null:null,
+      origine:'rangers',
     }
     const{error}=editArme?await supabase.from('stock_armes').update(payload).eq('id',editArme.id):await supabase.from('stock_armes').insert(payload)
     if(error){setMsg('⚠ '+error.message);return}
@@ -837,7 +838,7 @@ function TabComptes({snd,ranger}){
   const [msg,setMsg]=useState('')
   useEffect(()=>{load()},[])
   async function load(){
-    const{data}=await supabase.from('comptes').select('*, ranger:enregistre_par(prenom_rp,nom_rp)').order('date_op',{ascending:false}).limit(60)
+    const{data}=await supabase.from('comptes').select('*, ranger:enregistre_par(prenom_rp,nom_rp)').eq('origine','rangers').order('date_op',{ascending:false}).limit(60)
     const d=data||[];setOps(d);setSolde(d.reduce((s,r)=>r.operation==='ajout'?s+Number(r.montant):s-Number(r.montant),0));setLoading(false)
   }
   function openPage(t){snd.keyClick();setType(t);setForm({type_op:'Règlement de facture',autre_precis:'',description:'',nom_prenom:'',montant:''});setMsg('');setPage('form')}
@@ -848,7 +849,7 @@ function TabComptes({snd,ranger}){
     const objet=isAutre?(form.autre_precis||'Autre'):(form.description||form.type_op)
     const typePermis=isAutre?(form.autre_precis||'Autre'):form.type_op
     if(!objet){setMsg('⚠ Description requise');return}
-    const{error}=await supabase.from('comptes').insert({objet,nom_prenom:form.nom_prenom||null,type_permis:typePermis,montant:parseFloat(form.montant),operation:type,date_op:new Date().toISOString().split('T')[0],enregistre_par:ranger?.id})
+    const{error}=await supabase.from('comptes').insert({objet,nom_prenom:form.nom_prenom||null,type_permis:typePermis,montant:parseFloat(form.montant),operation:type,date_op:new Date().toISOString().split('T')[0],enregistre_par:ranger?.id,origine:'rangers'})
     if(error){setMsg('⚠ '+error.message);return}
     snd.ding();await load();setPage('list')
   }
@@ -929,7 +930,7 @@ function TabRapports({ranger,snd}){
   const [form,setForm]=useState({type_rapport:'Déposition',destinataires:'',comtes:'',date_faits:'',contenu:'',elements_supp:''})
   const [msg,setMsg]=useState('')
   useEffect(()=>{load()},[])
-  async function load(){const{data}=await supabase.from('rapports').select('*, ranger:redacteur_id(prenom_rp,nom_rp)').order('created_at',{ascending:false});setRapports(data||[]);setLoading(false)}
+  async function load(){const{data}=await supabase.from('rapports').select('*, ranger:redacteur_id(prenom_rp,nom_rp)').eq('origine','U.S. Rangers').order('created_at',{ascending:false});setRapports(data||[]);setLoading(false)}
   async function submit(){
     snd.carriageReturn()
     if(!form.contenu){setMsg('⚠ Contenu obligatoire');return}
@@ -1270,7 +1271,7 @@ function TabAdmin({isAdmin,currentRanger,snd}){
     const [{data:p},{data:a},{data:c}]=await Promise.all([
       supabase.from('rangers').select('*').eq('statut','en_attente'),
       supabase.from('rangers').select('*').eq('statut','actif').order('grade'),
-      supabase.from('codes_invitation').select('*, cree:cree_par(prenom_rp,nom_rp)').order('created_at',{ascending:false}),
+      supabase.from('rangers_codes').select('*, cree:cree_par(prenom_rp,nom_rp)').order('created_at',{ascending:false}),
     ])
     setPending(p||[]);setActifs(a||[]);setCodes(c||[]);setLoading(false)
   }
@@ -1297,7 +1298,7 @@ function TabAdmin({isAdmin,currentRanger,snd}){
   async function genererCode(){
     snd.ding()
     const code='USR-'+Math.floor(1000+Math.random()*8999)
-    await supabase.from('codes_invitation').insert({code,utilise:false,cree_par:currentRanger?.id})
+    await supabase.from('rangers_codes').insert({code,utilise:false,cree_par:currentRanger?.id})
     await load()
   }
 
