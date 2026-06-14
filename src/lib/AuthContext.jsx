@@ -41,7 +41,7 @@ export function AuthProvider({ children }) {
   async function signUp({ bp, password, prenomRp, nomRp, grade, codeInvite, photoFile }) {
     const bpClean = bp.trim().toUpperCase()
     const { data: codeData, error: codeError } = await supabase
-      .from('codes_invitation').select('*').eq('code', codeInvite.toUpperCase()).eq('utilise', false).single()
+      .from('rangers_codes').select('*').eq('code', codeInvite.toUpperCase()).eq('utilise', false).single()
     if (codeError || !codeData) return { error: { message: "Code d'invitation invalide ou déjà utilisé." } }
 
     const { data: existing } = await supabase.from('rangers').select('id').eq('bp', bpClean).maybeSingle()
@@ -70,7 +70,7 @@ export function AuthProvider({ children }) {
     })
     if (insertErr) return { error: { message: insertErr.message } }
 
-    await supabase.from('codes_invitation').update({ utilise: true }).eq('id', codeData.id)
+    await supabase.from('rangers_codes').update({ utilise: true }).eq('id', codeData.id)
     return { error: null }
   }
 

@@ -168,8 +168,8 @@ function TabAccueil({ranger,switchTab}){
     async function load(){
       const [{count:r},{count:v},{data:c},{count:e}]=await Promise.all([
         supabase.from('rangers').select('*',{count:'exact',head:true}).eq('statut','actif'),
-        supabase.from('stock_armes').select('*',{count:'exact',head:true}).eq('statut','volee'),
-        supabase.from('comptes').select('montant,operation'),
+        supabase.from('stock_armes').select('*',{count:'exact',head:true}).eq('statut','volee').eq('origine','rangers'),
+        supabase.from('comptes').select('montant,operation').eq('origine','rangers'),
         supabase.from('enquetes').select('*',{count:'exact',head:true}).in('statut',['en_cours','en_traque']),
       ])
       const soldeCalc=(c||[]).reduce((s,x)=>x.operation==='ajout'?s+Number(x.montant):s-Number(x.montant),0)
@@ -180,7 +180,7 @@ function TabAccueil({ranger,switchTab}){
   const now=new Date()
   return(
     <div className="page-in">
-      <PageHeader title="Tableau de Bord" sub="U.S. Rangers — Bureau de New Austin">
+      <PageHeader title="Tableau de Bord" sub="U.S. Rangers — Bureau de West Elizabeth">
         <div style={{textAlign:'right',fontSize:'9px',letterSpacing:'2px',color:'var(--ink-3)',lineHeight:'1.7'}}>{String(now.getDate()).padStart(2,'0')}/{String(now.getMonth()+1).padStart(2,'0')}/{now.getFullYear()}</div>
       </PageHeader>
       <div className="info-grid">
@@ -192,7 +192,7 @@ function TabAccueil({ranger,switchTab}){
       <div className="ornament">★ Message du Commandement ★</div>
       <div style={{borderLeft:'3px solid var(--ink-3)',padding:'10px 14px',background:'rgba(180,150,80,.06)',fontSize:'13px',lineHeight:'28px',color:'var(--ink-2)',fontStyle:'italic'}}>
         « Bienvenue, {ranger?.grade} {ranger?.prenom_rp} {ranger?.nom_rp}. Que la justice guide votre main. »
-        <div style={{marginTop:'6px',fontSize:'9px',letterSpacing:'2px',color:'var(--ink-3)',fontStyle:'normal'}}>— Le Commandant, New Austin · 1900</div>
+        <div style={{marginTop:'6px',fontSize:'9px',letterSpacing:'2px',color:'var(--ink-3)',fontStyle:'normal'}}>— Le Commandant, West Elizabeth · 1899</div>
       </div>
       <div style={{marginTop:'16px',display:'flex',gap:'8px',flexWrap:'wrap'}}>
         <button className="btn btn-primary btn-sm" onClick={()=>switchTab('enquetes')}>🔍 Enquêtes</button>
@@ -507,7 +507,7 @@ function TabLogistique({snd,ranger}){
   const [loading,setLoading]=useState(true)
   const [page,setPage]=useState('list') // 'list'|'add'|'edit'|'mouv'|'histo'
   const [editItem,setEditItem]=useState(null)
-  const [form,setForm]=useState({article:'',categorie:'Papeterie',qte_wallace:0,qte_blackwater:0,qte_mercer:0,qte_armadillo:0,min_blackwater:0})
+  const [form,setForm]=useState({article:'',categorie:'Papeterie',qte_strawberry:0,qte_blackwater:0,qte_valentine:0,qte_valentine:0,min_blackwater:0})
   const [mouv,setMouv]=useState({poste:'wallace',type:'ajout',quantite:1})
   const [msg,setMsg]=useState('')
   useEffect(()=>{load()},[])
@@ -518,8 +518,8 @@ function TabLogistique({snd,ranger}){
     ])
     setItems(i||[]);setHisto(h||[]);setLoading(false)
   }
-  function openAdd(){snd.keyClick();setEditItem(null);setForm({article:'',categorie:'Papeterie',qte_wallace:0,qte_blackwater:0,qte_mercer:0,qte_armadillo:0,min_blackwater:0});setMsg('');setPage('add')}
-  function openEdit(item){snd.keyClick();setEditItem(item);setForm({article:item.article,categorie:item.categorie,qte_wallace:item.qte_wallace,qte_blackwater:item.qte_blackwater,qte_mercer:item.qte_mercer,qte_armadillo:item.qte_armadillo,min_blackwater:item.min_blackwater});setMsg('');setPage('edit')}
+  function openAdd(){snd.keyClick();setEditItem(null);setForm({article:'',categorie:'Papeterie',qte_strawberry:0,qte_blackwater:0,qte_valentine:0,qte_valentine:0,min_blackwater:0});setMsg('');setPage('add')}
+  function openEdit(item){snd.keyClick();setEditItem(item);setForm({article:item.article,categorie:item.categorie,qte_strawberry:item.qte_strawberry,qte_blackwater:item.qte_blackwater,qte_valentine:item.qte_valentine,qte_valentine:item.qte_valentine,min_blackwater:item.min_blackwater});setMsg('');setPage('edit')}
   function openMouv(item){snd.keyClick();setEditItem(item);setMouv({poste:'wallace',type:'ajout',quantite:1});setMsg('');setPage('mouv')}
   async function save(){
     snd.carriageReturn()
@@ -542,7 +542,7 @@ function TabLogistique({snd,ranger}){
   }
   async function del(id){if(!confirm('Supprimer ?'))return;snd.carriageReturn();await supabase.from('logistique').delete().eq('id',id);await load()}
   const CATS=['Papeterie','Armurerie','Fourniture','Alimentaire','Soins']
-  const POSTES=[{id:'wallace',label:'Fort Wallace'},{id:'blackwater',label:'Bur. Blackwater'},{id:'mercer',label:'Fort Mercer'},{id:'armadillo',label:'Camp Armadillo'}]
+  const POSTES=[{id:'wallace',label:'Strawberry'},{id:'blackwater',label:'Blackwater'},{id:'mercer',label:'Valentine'},{id:'armadillo',label:'Valentine'}]
 
   if(page==='add'||page==='edit'){
     return(
@@ -553,10 +553,10 @@ function TabLogistique({snd,ranger}){
           <Field label="Catégorie"><select value={form.categorie} onChange={e=>{setForm(f=>({...f,categorie:e.target.value}));snd.keyClick()}}>{CATS.map(c=><option key={c}>{c}</option>)}</select></Field>
         </div>
         <div className="two-col">
-          <Field label="Fort Wallace"><input type="number" min="0" value={form.qte_wallace} onChange={e=>{setForm(f=>({...f,qte_wallace:+e.target.value}));snd.keyClick()}}/></Field>
-          <Field label="Bur. Blackwater"><input type="number" min="0" value={form.qte_blackwater} onChange={e=>{setForm(f=>({...f,qte_blackwater:+e.target.value}));snd.keyClick()}}/></Field>
-          <Field label="Fort Mercer"><input type="number" min="0" value={form.qte_mercer} onChange={e=>{setForm(f=>({...f,qte_mercer:+e.target.value}));snd.keyClick()}}/></Field>
-          <Field label="Camp Armadillo"><input type="number" min="0" value={form.qte_armadillo} onChange={e=>{setForm(f=>({...f,qte_armadillo:+e.target.value}));snd.keyClick()}}/></Field>
+          <Field label="Strawberry"><input type="number" min="0" value={form.qte_strawberry} onChange={e=>{setForm(f=>({...f,qte_strawberry:+e.target.value}));snd.keyClick()}}/></Field>
+          <Field label="Blackwater"><input type="number" min="0" value={form.qte_blackwater} onChange={e=>{setForm(f=>({...f,qte_blackwater:+e.target.value}));snd.keyClick()}}/></Field>
+          <Field label="Valentine"><input type="number" min="0" value={form.qte_valentine} onChange={e=>{setForm(f=>({...f,qte_valentine:+e.target.value}));snd.keyClick()}}/></Field>
+          <Field label="Valentine"><input type="number" min="0" value={form.qte_valentine} onChange={e=>{setForm(f=>({...f,qte_valentine:+e.target.value}));snd.keyClick()}}/></Field>
         </div>
         <Field label="Stock min. Blackwater"><input type="number" min="0" value={form.min_blackwater} onChange={e=>{setForm(f=>({...f,min_blackwater:+e.target.value}));snd.keyClick()}}/></Field>
         <div className="btn-row"><button className="btn btn-primary" onClick={save}>✓ Enregistrer</button><button className="btn" onClick={()=>setPage('list')}>✕ Annuler</button></div>
@@ -594,7 +594,7 @@ function TabLogistique({snd,ranger}){
           </div>
         </Field>
         <div style={{marginTop:'12px',padding:'10px',background:'rgba(180,150,80,.08)',border:'1px solid rgba(160,130,70,.3)',fontSize:'12px',color:'var(--ink-2)'}}>
-          Résultat : <strong>{editItem[`qte_${mouv.poste}`]||0}</strong> → <strong style={{color:mouv.type==='ajout'?'var(--green)':'var(--red)'}}>{Math.max(0,(editItem[`qte_${mouv.poste}`]||0)+(mouv.type==='ajout'?mouv.quantite:-mouv.quantite))}</strong>
+          Résultat : <strong>{editItem[`qte_${mouv.poste}`]||0}</strong> → <strong style={{color:mouv.type==='ajout'?'var(--green)':'var(--red)'}}>{Math.max(0,(editItem[`qte_${mouv.poste}`]||0)+(mouv.type==='ajout'?Number(mouv.quantite):-Number(mouv.quantite)))}</strong>
           <span style={{fontSize:'9px',color:'var(--ink-3)',marginLeft:'8px'}}>({mouv.type==='ajout'?'+':'-'}{mouv.quantite} à {POSTES.find(p=>p.id===mouv.poste)?.label})</span>
         </div>
         <div className="btn-row"><button className="btn btn-primary" onClick={saveMouv}>✓ Confirmer</button><button className="btn" onClick={()=>setPage('list')}>✕ Annuler</button></div>
@@ -635,18 +635,18 @@ function TabLogistique({snd,ranger}){
       </PageHeader>
       {loading?<Loader/>:(
         <table className="register-table">
-          <thead><tr><th>Article</th><th>Catégorie</th><th>Wallace</th><th>Blackwater</th><th>Mercer</th><th>Armadillo</th><th></th></tr></thead>
+          <thead><tr><th>Article</th><th>Catégorie</th><th>Strawberry</th><th>Blackwater</th><th>Valentine</th><th>Valentine</th><th></th></tr></thead>
           <tbody>
             {items.map(item=>(
               <tr key={item.id}>
                 <td><strong>{item.article}</strong></td>
                 <td style={{fontSize:'10px'}}>{item.categorie}</td>
-                <td>{item.qte_wallace}</td>
+                <td>{item.qte_strawberry}</td>
                 <td style={{color:item.qte_blackwater<item.min_blackwater?'var(--red)':'inherit',fontWeight:item.qte_blackwater<item.min_blackwater?700:'normal'}}>
                   {item.qte_blackwater}{item.min_blackwater>0?` (${item.min_blackwater})`:''}
                 </td>
-                <td>{item.qte_mercer}</td>
-                <td>{item.qte_armadillo||'—'}</td>
+                <td>{item.qte_valentine}</td>
+                <td>{item.qte_valentine||'—'}</td>
                 <td><div style={{display:'flex',gap:'2px'}}>
                   <button className="btn btn-success btn-sm" onClick={()=>openMouv(item)} title="Mouvement stock">±</button>
                   <button className="btn btn-sm" onClick={()=>openEdit(item)}>✎</button>
@@ -677,7 +677,7 @@ function TabArmes({snd,ranger,isAdmin}){
   useEffect(()=>{load()},[])
   async function load(){
     const [{data:a},{data:r}]=await Promise.all([
-      supabase.from('stock_armes').select('*, ranger:affecte_a(prenom_rp,nom_rp)').eq('origine','rangers').order('type_arme'),
+      supabase.from('stock_armes').select('*').eq('origine','rangers').order('type_arme').order('type_arme'),
       supabase.from('rangers').select('id,prenom_rp,nom_rp').eq('statut','actif'),
     ])
     setArmes(a||[]);setRangers(r||[]);setLoading(false)
@@ -696,12 +696,14 @@ function TabArmes({snd,ranger,isAdmin}){
   async function save(){
     snd.carriageReturn()
     if(!form.type_arme||!form.numero_serie){setMsg('⚠ Type et numéro requis');return}
+    const rangerSelectionne = rangers.find(r=>r.id===form.affecte_a)
     const payload={
       type_arme:form.type_arme,numero_serie:form.numero_serie,
       date_fabrication:form.date_fabrication||null,
       emplacement:form.statut==='affectee'?null:form.emplacement,
       statut:form.statut,
       affecte_a:form.statut==='affectee'?form.affecte_a||null:null,
+      nom_affecte:form.statut==='affectee'&&rangerSelectionne?`${rangerSelectionne.prenom_rp} ${rangerSelectionne.nom_rp}`:null,
       origine:'rangers',
     }
     const{error}=editArme?await supabase.from('stock_armes').update(payload).eq('id',editArme.id):await supabase.from('stock_armes').insert(payload)
@@ -712,7 +714,7 @@ function TabArmes({snd,ranger,isAdmin}){
   async function del(id){if(!confirm('Supprimer ?'))return;snd.carriageReturn();await supabase.from('stock_armes').delete().eq('id',id);await load()}
 
   const TYPES=['Cattleman','Navy','Winchester','Springfield','Pompe','Verrou','Rolling Block','Autre']
-  const EMPLACEMENTS=['Registre Blackwater','Registre Wallace','Fort Mercer','Camp Armadillo']
+  const EMPLACEMENTS=['Registre Blackwater','Registre Strawberry','Valentine','Valentine']
   const volees=armes.filter(a=>a.statut==='volee').length
   const affectees=armes.filter(a=>a.statut==='affectee').length
 
@@ -796,13 +798,13 @@ function TabArmes({snd,ranger,isAdmin}){
                 <td style={{letterSpacing:'2px',fontSize:'11px'}}>{a.numero_serie}</td>
                 <td style={{fontSize:'10px'}}>{a.date_fabrication?new Date(a.date_fabrication).toLocaleDateString('fr-FR'):'—'}</td>
                 <td>
-                  {a.statut==='affectee'&&a.ranger?(
+                  {a.statut==='affectee'&&a.nom_affecte?(
                     <span
-                      onMouseEnter={e=>setTooltip({show:true,text:`Affectée à : ${a.ranger.prenom_rp} ${a.ranger.nom_rp}`,x:e.clientX,y:e.clientY})}
+                      onMouseEnter={e=>setTooltip({show:true,text:`Affectée à : ${a.nom_affecte||'—'}`,x:e.clientX,y:e.clientY})}
                       onMouseMove={e=>setTooltip(t=>({...t,x:e.clientX,y:e.clientY}))}
                       onMouseLeave={()=>setTooltip(t=>({...t,show:false}))}
                       style={{cursor:'help',borderBottom:'1px dashed var(--ink-3)',fontStyle:'italic'}}>
-                      {a.ranger.prenom_rp} {a.ranger.nom_rp}
+                      {a.nom_affecte||'—'}
                     </span>
                   ):(a.emplacement||'—')}
                 </td>
@@ -838,7 +840,7 @@ function TabComptes({snd,ranger}){
   const [msg,setMsg]=useState('')
   useEffect(()=>{load()},[])
   async function load(){
-    const{data}=await supabase.from('comptes').select('*, ranger:enregistre_par(prenom_rp,nom_rp)').eq('origine','rangers').order('date_op',{ascending:false}).limit(60)
+    const{data}=await supabase.from('comptes').select('*').eq('origine','rangers').order('date_op',{ascending:false}).limit(60).order('date_op',{ascending:false}).limit(60)
     const d=data||[];setOps(d);setSolde(d.reduce((s,r)=>r.operation==='ajout'?s+Number(r.montant):s-Number(r.montant),0));setLoading(false)
   }
   function openPage(t){snd.keyClick();setType(t);setForm({type_op:'Règlement de facture',autre_precis:'',description:'',nom_prenom:'',montant:''});setMsg('');setPage('form')}
@@ -849,7 +851,7 @@ function TabComptes({snd,ranger}){
     const objet=isAutre?(form.autre_precis||'Autre'):(form.description||form.type_op)
     const typePermis=isAutre?(form.autre_precis||'Autre'):form.type_op
     if(!objet){setMsg('⚠ Description requise');return}
-    const{error}=await supabase.from('comptes').insert({objet,nom_prenom:form.nom_prenom||null,type_permis:typePermis,montant:parseFloat(form.montant),operation:type,date_op:new Date().toISOString().split('T')[0],enregistre_par:ranger?.id,origine:'rangers'})
+    const{error}=await supabase.from('comptes').insert({objet,nom_prenom:form.nom_prenom||null,type_permis:typePermis,montant:parseFloat(form.montant),operation:type,date_op:new Date().toISOString().split('T')[0],enregistre_par:ranger?.id,enregistre_par_nom:ranger?`${ranger.prenom_rp} ${ranger.nom_rp}`:null,origine:'rangers'})
     if(error){setMsg('⚠ '+error.message);return}
     snd.ding();await load();setPage('list')
   }
@@ -870,7 +872,7 @@ function TabComptes({snd,ranger}){
           </Field>
         )}
         <Field label={form.type_op==='Autre'?'Description complémentaire (optionnel)':'Description complémentaire (optionnel)'}>
-          <input type="text" value={form.description} onChange={e=>{setForm(f=>({...f,description:e.target.value}));snd.keyClick()}} placeholder="ex: Facture Valentine, marchand Armadillo..."/>
+          <input type="text" value={form.description} onChange={e=>{setForm(f=>({...f,description:e.target.value}));snd.keyClick()}} placeholder="ex: Facture Valentine, marchand Valentine..."/>
         </Field>
         <Field label="Nom / Prénom concerné (optionnel)">
           <input type="text" value={form.nom_prenom} onChange={e=>{setForm(f=>({...f,nom_prenom:e.target.value}));snd.keyClick()}} placeholder="DUPONT Jean"/>
@@ -907,7 +909,7 @@ function TabComptes({snd,ranger}){
                 <td style={{fontSize:'9px'}}>{new Date(op.date_op).toLocaleDateString('fr-FR')}</td>
                 <td style={{fontSize:'11px'}}>{op.objet}</td>
                 <td style={{fontSize:'10px'}}>{op.nom_prenom||'—'}</td>
-                <td style={{fontSize:'10px'}}>{op.ranger?`${op.ranger.prenom_rp}`:'—'}</td>
+                <td style={{fontSize:'10px'}}>{op.enregistre_par_nom||'—'}</td>
                 <td style={{fontSize:'10px'}}>{op.type_permis||'—'}</td>
                 <td style={{fontWeight:700}}>{Number(op.montant).toFixed(2)} $</td>
                 <td><span className={`status-badge ${op.operation==='ajout'?'status-ok':'status-vol'}`} style={{border:'1px solid',padding:'1px 5px',fontSize:'9px',fontFamily:"'Special Elite',cursive"}}>{op.operation==='ajout'?'Ajout':'Retrait'}</span></td>
@@ -930,12 +932,12 @@ function TabRapports({ranger,snd}){
   const [form,setForm]=useState({type_rapport:'Déposition',destinataires:'',comtes:'',date_faits:'',contenu:'',elements_supp:''})
   const [msg,setMsg]=useState('')
   useEffect(()=>{load()},[])
-  async function load(){const{data}=await supabase.from('rapports').select('*, ranger:redacteur_id(prenom_rp,nom_rp)').eq('origine','U.S. Rangers').order('created_at',{ascending:false});setRapports(data||[]);setLoading(false)}
+  async function load(){const{data}=await supabase.from('rapports').select('*').eq('origine','U.S. Rangers').order('created_at',{ascending:false});setRapports(data||[]);setLoading(false)}
   async function submit(){
     snd.carriageReturn()
     if(!form.contenu){setMsg('⚠ Contenu obligatoire');return}
     const tel=String(Math.floor(5000+Math.random()*4999))
-    const{error}=await supabase.from('rapports').insert({numero_telegram:tel,type_rapport:form.type_rapport,destinataires:form.destinataires.split('·').map(s=>s.trim()).filter(Boolean),comtes:form.comtes.split('·').map(s=>s.trim()).filter(Boolean),date_faits:form.date_faits||null,contenu:form.contenu,elements_supp:form.elements_supp,redacteur_id:ranger?.id,statut:'soumis',origine:'U.S. Rangers'})
+    const{error}=await supabase.from('rapports').insert({numero_telegram:tel,type_rapport:form.type_rapport,destinataires:form.destinataires.split('·').map(s=>s.trim()).filter(Boolean),comtes:form.comtes.split('·').map(s=>s.trim()).filter(Boolean),date_faits:form.date_faits||null,contenu:form.contenu,elements_supp:form.elements_supp,redacteur_id:ranger?.id,redacteur_nom:ranger?`${ranger.prenom_rp} ${ranger.nom_rp}`:null,statut:'soumis',origine:'U.S. Rangers'})
     if(error){setMsg('⚠ '+error.message);return}
     snd.ding();setMsg(`✓ Télégramme n° ${tel}`);await load();setTimeout(()=>{setPage('list');setMsg('')},900)
   }
@@ -950,11 +952,11 @@ function TabRapports({ranger,snd}){
               {['Déposition','Rapport d\'intervention','Rapport de patrouille','Rapport d\'incident','Note interne'].map(t=><option key={t}>{t}</option>)}
             </select>
           </Field>
-          <Field label="Date des faits"><input type="text" placeholder="14/04/1900 — 20h00" value={form.date_faits} onChange={e=>{setForm(f=>({...f,date_faits:e.target.value}));snd.keyClick()}}/></Field>
+          <Field label="Date des faits"><input type="text" placeholder="14/04/1899 — 20h00" value={form.date_faits} onChange={e=>{setForm(f=>({...f,date_faits:e.target.value}));snd.keyClick()}}/></Field>
         </div>
         <div className="two-col">
           <Field label="Destinataires (séparés par ·)"><input type="text" placeholder="U.S. Rangers · U.S. Marshals" value={form.destinataires} onChange={e=>{setForm(f=>({...f,destinataires:e.target.value}));snd.keyClick()}}/></Field>
-          <Field label="Comtés (séparés par ·)"><input type="text" placeholder="New Austin · Cholla Springs" value={form.comtes} onChange={e=>{setForm(f=>({...f,comtes:e.target.value}));snd.keyClick()}}/></Field>
+          <Field label="Comtés (séparés par ·)"><input type="text" placeholder="West Elizabeth · Tall Trees" value={form.comtes} onChange={e=>{setForm(f=>({...f,comtes:e.target.value}));snd.keyClick()}}/></Field>
         </div>
         <Field label="Contenu de la déposition ★">
           <textarea value={form.contenu} onChange={e=>{setForm(f=>({...f,contenu:e.target.value}));snd.keyClick()}} placeholder="Je soussigné(e)..." style={{minHeight:'160px'}}/>
@@ -973,7 +975,7 @@ function TabRapports({ranger,snd}){
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px',marginBottom:'14px',padding:'10px',background:'rgba(180,150,80,.06)',border:'1px solid rgba(160,130,70,.3)'}}>
           <div><div style={{fontSize:'8px',letterSpacing:'2px',color:'var(--ink-3)',textTransform:'uppercase',marginBottom:'2px'}}>Type</div><div style={{fontFamily:"'Special Elite',cursive",fontSize:'12px'}}>{viewRapport.type_rapport}</div></div>
           <div><div style={{fontSize:'8px',letterSpacing:'2px',color:'var(--ink-3)',textTransform:'uppercase',marginBottom:'2px'}}>Date des faits</div><div style={{fontSize:'12px'}}>{viewRapport.date_faits||'—'}</div></div>
-          <div><div style={{fontSize:'8px',letterSpacing:'2px',color:'var(--ink-3)',textTransform:'uppercase',marginBottom:'2px'}}>Rédacteur</div><div style={{fontFamily:"'Special Elite',cursive",fontSize:'12px'}}>{viewRapport.ranger?`${viewRapport.ranger.prenom_rp} ${viewRapport.ranger.nom_rp}`:'—'}</div></div>
+          <div><div style={{fontSize:'8px',letterSpacing:'2px',color:'var(--ink-3)',textTransform:'uppercase',marginBottom:'2px'}}>Rédacteur</div><div style={{fontFamily:"'Special Elite',cursive",fontSize:'12px'}}>{viewRapport.redacteur_nom||'—'}</div></div>
           <div><div style={{fontSize:'8px',letterSpacing:'2px',color:'var(--ink-3)',textTransform:'uppercase',marginBottom:'2px'}}>Statut</div><div style={{fontSize:'12px'}}>{viewRapport.statut}</div></div>
         </div>
         <div style={{borderTop:'2px solid var(--ink)',paddingTop:'14px',whiteSpace:'pre-wrap',fontStyle:'italic',fontSize:'13px',lineHeight:'28px',color:'var(--ink-2)'}}>{viewRapport.contenu}</div>
@@ -996,7 +998,7 @@ function TabRapports({ranger,snd}){
                 <td style={{letterSpacing:'2px',fontWeight:700}}>{r.numero_telegram}</td>
                 <td style={{fontSize:'10px'}}>{r.date_faits?new Date(r.date_faits).toLocaleDateString('fr-FR'):'—'}</td>
                 <td>{r.type_rapport}</td>
-                <td style={{fontSize:'10px'}}>{r.ranger?`${r.ranger.prenom_rp} ${r.ranger.nom_rp}`:'—'}</td>
+                <td style={{fontSize:'10px'}}>{r.redacteur_nom||'—'}</td>
                 <td><span className={`status-badge ${r.statut==='archive'?'status-ok':'status-att'}`}>{r.statut}</span></td>
                 <td><button className="btn btn-sm" onClick={()=>{snd.keyClick();setViewRapport(r);setPage('view')}}>▶ Lire</button></td>
               </tr>
@@ -1091,7 +1093,7 @@ function TabEnquetes({ranger,snd}){
           <Field label="Importance"><select value={elemForm.importance} onChange={e=>{setElemForm(f=>({...f,importance:e.target.value}));snd.keyClick()}}>{IMPORTANCES.map(i=><option key={i} value={i}>{i.charAt(0).toUpperCase()+i.slice(1)}</option>)}</select></Field>
         </div>
         <div className="two-col">
-          <Field label="Lieu (si applicable)"><input type="text" value={elemForm.lieu} onChange={e=>{setElemForm(f=>({...f,lieu:e.target.value}));snd.keyClick()}} placeholder="ex: Fort Mercer..."/></Field>
+          <Field label="Lieu (si applicable)"><input type="text" value={elemForm.lieu} onChange={e=>{setElemForm(f=>({...f,lieu:e.target.value}));snd.keyClick()}} placeholder="ex: Valentine..."/></Field>
           <Field label="Date de l'événement"><input type="date" value={elemForm.date_evenement} onChange={e=>{setElemForm(f=>({...f,date_evenement:e.target.value}));snd.keyClick()}}/></Field>
         </div>
         <Field label="Description / Contenu">
@@ -1114,14 +1116,14 @@ function TabEnquetes({ranger,snd}){
     return(
       <SlidePage title="Ouvrir un dossier d'enquête" onClose={()=>setPage('list')} wide>
         {msg&&<div className={msg.startsWith('⚠')?'msg-error':'msg-success'}>{msg}</div>}
-        <Field label="Titre du dossier ★"><input type="text" value={form.titre} onChange={e=>{setForm(f=>({...f,titre:e.target.value}));snd.keyClick()}} placeholder="ex: Meurtre à Fort Mercer, Gang Lamasdrones..."/></Field>
+        <Field label="Titre du dossier ★"><input type="text" value={form.titre} onChange={e=>{setForm(f=>({...f,titre:e.target.value}));snd.keyClick()}} placeholder="ex: Meurtre à Valentine, Gang Lamasdrones..."/></Field>
         <div className="two-col">
           <Field label="Type d'enquête"><select value={form.type_enquete} onChange={e=>{setForm(f=>({...f,type_enquete:e.target.value}));snd.keyClick()}}>{TYPES_ENQ.map(t=><option key={t}>{t}</option>)}</select></Field>
           <Field label="Priorité"><select value={form.priorite} onChange={e=>{setForm(f=>({...f,priorite:e.target.value}));snd.keyClick()}}><option value="basse">Basse</option><option value="normale">Normale</option><option value="haute">Haute</option><option value="urgente">Urgente</option></select></Field>
         </div>
         <div className="two-col">
-          <Field label="Lieu principal"><input type="text" value={form.lieu_principal} onChange={e=>{setForm(f=>({...f,lieu_principal:e.target.value}));snd.keyClick()}} placeholder="ex: Fort Mercer..."/></Field>
-          <Field label="Comtés (séparés par ·)"><input type="text" value={form.comtes} onChange={e=>{setForm(f=>({...f,comtes:e.target.value}));snd.keyClick()}} placeholder="New Austin · Cholla Springs"/></Field>
+          <Field label="Lieu principal"><input type="text" value={form.lieu_principal} onChange={e=>{setForm(f=>({...f,lieu_principal:e.target.value}));snd.keyClick()}} placeholder="ex: Valentine..."/></Field>
+          <Field label="Comtés (séparés par ·)"><input type="text" value={form.comtes} onChange={e=>{setForm(f=>({...f,comtes:e.target.value}));snd.keyClick()}} placeholder="West Elizabeth · Tall Trees"/></Field>
         </div>
         <Field label="Date d'ouverture"><input type="date" value={form.date_debut} onChange={e=>{setForm(f=>({...f,date_debut:e.target.value}));snd.keyClick()}}/></Field>
         <Field label="Description / Résumé initial"><textarea value={form.description} onChange={e=>{setForm(f=>({...f,description:e.target.value}));snd.keyClick()}} placeholder="Décrivez les faits initiaux..." style={{minHeight:'90px'}}/></Field>
