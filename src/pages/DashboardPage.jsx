@@ -105,7 +105,7 @@ export default function DashboardPage() {
             <span style={{fontSize:'16px',filter:'sepia(1) brightness(.6)'}}>⭐</span>
             <div>
               <div style={{fontFamily:"'Special Elite',cursive",fontSize:'11px',letterSpacing:'4px',color:'var(--chrome)',textTransform:'uppercase'}}>U.S. Rangers</div>
-              <div style={{fontSize:'8px',letterSpacing:'3px',color:'rgba(180,150,100,.4)',textTransform:'uppercase'}}>Bureau de Commandement</div>
+              <div style={{fontSize:'8px',letterSpacing:'3px',color:'rgba(180,150,100,.4)',textTransform:'uppercase'}}>Bureau de Blackwater</div>
             </div>
           </div>
           <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
@@ -268,7 +268,7 @@ function TabProfil({ranger,snd}){
 
   return(
     <div className="page-in">
-      <PageHeader title="Mon Dossier" sub="Fiche personnelle — U.S. Rangers">
+      <PageHeader title="Mon Dossier" sub="Fiche personnelle — West Elizabeth">
         {!editing&&<button className="btn btn-primary btn-sm" onClick={()=>{snd.keyClick();setEditing(true)}}>✎ Modifier</button>}
       </PageHeader>
       {msg&&<div className={msg.startsWith('⚠')?'msg-error':'msg-success'}>{msg}</div>}
@@ -410,7 +410,7 @@ function TabOrganigramme({canEdit,snd}){
   // ── Arbre organigramme ──
   return(
     <div className="page-in">
-      <PageHeader title="Organigramme" sub="Structure hiérarchique — U.S. Rangers">
+      <PageHeader title="Organigramme" sub="Structure hiérarchique — West Elizabeth">
         {canEdit&&<div style={{fontSize:'9px',color:'var(--ink-3)',fontStyle:'italic'}}>✎ Cliquez sur un membre pour modifier</div>}
       </PageHeader>
 
@@ -507,7 +507,7 @@ function TabLogistique({snd,ranger}){
   const [loading,setLoading]=useState(true)
   const [page,setPage]=useState('list') // 'list'|'add'|'edit'|'mouv'|'histo'
   const [editItem,setEditItem]=useState(null)
-  const [form,setForm]=useState({article:'',categorie:'Papeterie',qte_strawberry:0,qte_blackwater:0,qte_valentine:0,qte_valentine:0,min_blackwater:0})
+  const [form,setForm]=useState({article:'',categorie:'Papeterie',qte_strawberry:0,qte_blackwater:0,qte_valentine:0,min_blackwater:0})
   const [mouv,setMouv]=useState({poste:'wallace',type:'ajout',quantite:1})
   const [msg,setMsg]=useState('')
   useEffect(()=>{load()},[])
@@ -518,8 +518,8 @@ function TabLogistique({snd,ranger}){
     ])
     setItems(i||[]);setHisto(h||[]);setLoading(false)
   }
-  function openAdd(){snd.keyClick();setEditItem(null);setForm({article:'',categorie:'Papeterie',qte_strawberry:0,qte_blackwater:0,qte_valentine:0,qte_valentine:0,min_blackwater:0});setMsg('');setPage('add')}
-  function openEdit(item){snd.keyClick();setEditItem(item);setForm({article:item.article,categorie:item.categorie,qte_strawberry:item.qte_strawberry,qte_blackwater:item.qte_blackwater,qte_valentine:item.qte_valentine,qte_valentine:item.qte_valentine,min_blackwater:item.min_blackwater});setMsg('');setPage('edit')}
+  function openAdd(){snd.keyClick();setEditItem(null);setForm({article:'',categorie:'Papeterie',qte_strawberry:0,qte_blackwater:0,qte_valentine:0,min_blackwater:0});setMsg('');setPage('add')}
+  function openEdit(item){snd.keyClick();setEditItem(item);setForm({article:item.article,categorie:item.categorie,qte_strawberry:item.qte_strawberry||0,qte_blackwater:item.qte_blackwater||0,qte_valentine:item.qte_valentine||0,min_blackwater:item.min_blackwater||0});setMsg('');setPage('edit')}
   function openMouv(item){snd.keyClick();setEditItem(item);setMouv({poste:'wallace',type:'ajout',quantite:1});setMsg('');setPage('mouv')}
   async function save(){
     snd.carriageReturn()
@@ -542,7 +542,7 @@ function TabLogistique({snd,ranger}){
   }
   async function del(id){if(!confirm('Supprimer ?'))return;snd.carriageReturn();await supabase.from('logistique').delete().eq('id',id);await load()}
   const CATS=['Papeterie','Armurerie','Fourniture','Alimentaire','Soins']
-  const POSTES=[{id:'wallace',label:'Strawberry'},{id:'blackwater',label:'Blackwater'},{id:'mercer',label:'Valentine'},{id:'armadillo',label:'Valentine'}]
+  const POSTES=[{id:'strawberry',label:'Strawberry'},{id:'blackwater',label:'Blackwater'},{id:'valentine',label:'Valentine'}]
 
   if(page==='add'||page==='edit'){
     return(
@@ -555,7 +555,6 @@ function TabLogistique({snd,ranger}){
         <div className="two-col">
           <Field label="Strawberry"><input type="number" min="0" value={form.qte_strawberry} onChange={e=>{setForm(f=>({...f,qte_strawberry:+e.target.value}));snd.keyClick()}}/></Field>
           <Field label="Blackwater"><input type="number" min="0" value={form.qte_blackwater} onChange={e=>{setForm(f=>({...f,qte_blackwater:+e.target.value}));snd.keyClick()}}/></Field>
-          <Field label="Valentine"><input type="number" min="0" value={form.qte_valentine} onChange={e=>{setForm(f=>({...f,qte_valentine:+e.target.value}));snd.keyClick()}}/></Field>
           <Field label="Valentine"><input type="number" min="0" value={form.qte_valentine} onChange={e=>{setForm(f=>({...f,qte_valentine:+e.target.value}));snd.keyClick()}}/></Field>
         </div>
         <Field label="Stock min. Blackwater"><input type="number" min="0" value={form.min_blackwater} onChange={e=>{setForm(f=>({...f,min_blackwater:+e.target.value}));snd.keyClick()}}/></Field>
@@ -627,7 +626,7 @@ function TabLogistique({snd,ranger}){
 
   return(
     <div className="page-in">
-      <PageHeader title="Logistique" sub="Inventaire des fournitures">
+      <PageHeader title="Logistique" sub="Inventaire — West Elizabeth">
         <div className="btn-row" style={{margin:0,gap:'5px'}}>
           <button className="btn btn-primary btn-sm" onClick={openAdd}>+ Article</button>
           <button className="btn btn-sm" onClick={()=>{snd.keyClick();setPage('histo')}}>📋 Historique</button>
@@ -635,7 +634,7 @@ function TabLogistique({snd,ranger}){
       </PageHeader>
       {loading?<Loader/>:(
         <table className="register-table">
-          <thead><tr><th>Article</th><th>Catégorie</th><th>Strawberry</th><th>Blackwater</th><th>Valentine</th><th>Valentine</th><th></th></tr></thead>
+          <thead><tr><th>Article</th><th>Catégorie</th><th>Strawberry</th><th>Blackwater</th><th>Valentine</th><th></th></tr></thead>
           <tbody>
             {items.map(item=>(
               <tr key={item.id}>
@@ -645,8 +644,7 @@ function TabLogistique({snd,ranger}){
                 <td style={{color:item.qte_blackwater<item.min_blackwater?'var(--red)':'inherit',fontWeight:item.qte_blackwater<item.min_blackwater?700:'normal'}}>
                   {item.qte_blackwater}{item.min_blackwater>0?` (${item.min_blackwater})`:''}
                 </td>
-                <td>{item.qte_valentine}</td>
-                <td>{item.qte_valentine||'—'}</td>
+                <td>{item.qte_valentine||0}</td>
                 <td><div style={{display:'flex',gap:'2px'}}>
                   <button className="btn btn-success btn-sm" onClick={()=>openMouv(item)} title="Mouvement stock">±</button>
                   <button className="btn btn-sm" onClick={()=>openEdit(item)}>✎</button>
@@ -714,7 +712,7 @@ function TabArmes({snd,ranger,isAdmin}){
   async function del(id){if(!confirm('Supprimer ?'))return;snd.carriageReturn();await supabase.from('stock_armes').delete().eq('id',id);await load()}
 
   const TYPES=['Cattleman','Navy','Winchester','Springfield','Pompe','Verrou','Rolling Block','Autre']
-  const EMPLACEMENTS=['Registre Blackwater','Registre Strawberry','Valentine','Valentine']
+  const EMPLACEMENTS=['Bureau Blackwater','Bureau Strawberry','Bureau Valentine']
   const volees=armes.filter(a=>a.statut==='volee').length
   const affectees=armes.filter(a=>a.statut==='affectee').length
 
@@ -775,7 +773,7 @@ function TabArmes({snd,ranger,isAdmin}){
         </div>
       )}
 
-      <PageHeader title="Stock d'Armes" sub="Registre des armes à feu">
+      <PageHeader title="Stock d'Armes" sub="Registre des armes — West Elizabeth">
         <div className="btn-row" style={{margin:0,gap:'5px'}}>
           <button className="btn btn-primary btn-sm" onClick={openAdd}>+ Enregistrer</button>
           <button className="btn btn-danger btn-sm" onClick={()=>{snd.keyClick();setEditArme(null);setForm(f=>({...f,statut:'volee',type_arme:'',numero_serie:''}));setMsg('');setPage('add')}}>⚠ Signaler vol</button>
@@ -890,7 +888,7 @@ function TabComptes({snd,ranger}){
 
   return(
     <div className="page-in">
-      <PageHeader title="Gestion des Comptes" sub="État financier du Bureau">
+      <PageHeader title="Gestion des Comptes" sub="État financier du Bureau de Blackwater">
         <div className="btn-row" style={{margin:0,gap:'5px'}}>
           <button className="btn btn-success btn-sm" onClick={()=>openPage('ajout')}>+ Entrée</button>
           <button className="btn btn-danger btn-sm" onClick={()=>openPage('retrait')}>− Sortie</button>
@@ -986,7 +984,7 @@ function TabRapports({ranger,snd}){
 
   return(
     <div className="page-in">
-      <PageHeader title="Rapports" sub="Registre officiel — U.S. Rangers">
+      <PageHeader title="Rapports" sub="Registre officiel — West Elizabeth">
         <button className="btn btn-primary btn-sm" onClick={()=>{snd.keyClick();setForm({type_rapport:'Déposition',destinataires:'',comtes:'',date_faits:'',contenu:'',elements_supp:''});setMsg('');setPage('new')}}>+ Rédiger</button>
       </PageHeader>
       {loading?<Loader/>:(
@@ -1217,7 +1215,7 @@ function TabEnquetes({ranger,snd}){
   // ── Liste enquêtes ──
   return(
     <div className="page-in">
-      <PageHeader title="Enquêtes" sub="Bureau des investigations — U.S. Rangers">
+      <PageHeader title="Enquêtes" sub="Bureau des investigations — West Elizabeth">
         <button className="btn btn-primary btn-sm" onClick={()=>{snd.keyClick();setForm({titre:'',description:'',type_enquete:'Générale',priorite:'normale',lieu_principal:'',comtes:'',date_debut:new Date().toISOString().split('T')[0]});setMsg('');setPage('new-enquete')}}>+ Ouvrir un dossier</button>
       </PageHeader>
       <div style={{display:'flex',gap:'5px',flexWrap:'wrap',marginBottom:'14px'}}>
@@ -1343,7 +1341,7 @@ function TabAdmin({isAdmin,currentRanger,snd}){
   if(loading)return <Loader/>
   return(
     <div className="page-in">
-      <PageHeader title="Administration" sub="Gestion des accès — U.S. Rangers"/>
+      <PageHeader title="Administration" sub="Gestion des accès — West Elizabeth"/>
       {msg&&<div className="msg-success">{msg}</div>}
 
       <div className="section-title">⏳ Demandes en attente ({pending.length})</div>

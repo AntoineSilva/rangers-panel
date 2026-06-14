@@ -86,7 +86,7 @@ export default function LoginPage() {
             United States Rangers
           </h1>
           <div style={{ color:'rgba(180,150,100,0.4)', fontSize:'10px', letterSpacing:'4px', textTransform:'uppercase' }}>
-            Bureau — Accès Sécurisé — New Austin
+            Bureau — Accès Sécurisé — West Elizabeth
           </div>
         </div>
 
@@ -248,7 +248,7 @@ export default function LoginPage() {
           </div>
 
           <div style={{ marginTop:'16px', textAlign:'center', fontSize:'9px', letterSpacing:'3px', color:'var(--ink-3)', opacity:0.5, textTransform:'uppercase' }}>
-            — United States of America — New Austin — 1899 —
+            — United States of America — West Elizabeth — 1899 —
           </div>
         </div>
 
