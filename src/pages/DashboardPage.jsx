@@ -694,7 +694,7 @@ function TabArmes({snd,ranger,isAdmin}){
   useEffect(()=>{load()},[])
   async function load(){
     const [{data:a},{data:r}]=await Promise.all([
-      supabase.from('rangers_armes').select('*').order('type_arme').order('type_arme'),
+      supabase.from('rangers_armes').select('*').order('type_arme'),
       supabase.from('rangers').select('id,prenom_rp,nom_rp').eq('statut','actif'),
     ])
     setArmes(a||[]);setRangers(r||[]);setLoading(false)
@@ -706,7 +706,7 @@ function TabArmes({snd,ranger,isAdmin}){
   function openEdit(a){
     if(!canModifyAffect)return
     snd.keyClick();setEditArme(a)
-    setForm({type_arme:a.type_arme,numero_serie:a.numero_serie,date_entree:a.date_entree||'',emplacement:a.emplacement||'',statut:a.statut,affecte_a:a.affecte_a||'',nom_affecte:a.ranger?`${a.ranger.prenom_rp} ${a.ranger.nom_rp}`:''})
+    setForm({type_arme:a.type_arme,numero_serie:a.numero_serie,date_entree:a.date_entree||'',emplacement:a.emplacement||'',statut:a.statut,affecte_a:a.affecte_a||'',nom_affecte:a.nom_affecte||''})
     setMsg('');setPage('edit')
   }
 
@@ -720,8 +720,7 @@ function TabArmes({snd,ranger,isAdmin}){
       emplacement:form.statut==='affectee'?null:form.emplacement,
       statut:form.statut,
       affecte_a:form.statut==='affectee'?form.affecte_a||null:null,
-      nom_affecte:form.statut==='affectee'&&rangerSelectionne?`${rangerSelectionne.prenom_rp} ${rangerSelectionne.nom_rp}`:null,
-      origine:'rangers',
+      nom_affecte:form.statut==='affectee'&&rangerSelectionne?`${rangerSelectionne.prenom_rp} ${rangerSelectionne.nom_rp}`:null
     }
     const{error}=editArme?await supabase.from('rangers_armes').update(payload).eq('id',editArme.id):await supabase.from('rangers_armes').insert(payload)
     if(error){setMsg('⚠ '+error.message);return}
