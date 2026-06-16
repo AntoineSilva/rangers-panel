@@ -168,8 +168,8 @@ function TabAccueil({ranger,switchTab}){
     async function load(){
       const [{count:r},{count:v},{data:c},{count:e}]=await Promise.all([
         supabase.from('rangers').select('*',{count:'exact',head:true}).eq('statut','actif'),
-        supabase.from('stock_armes').select('*',{count:'exact',head:true}).eq('statut','volee').eq('origine','rangers'),
-        supabase.from('comptes').select('montant,operation').eq('origine','rangers'),
+        supabase.from('rangers_armes').select('*',{count:'exact',head:true}).eq('statut','volee'),
+        supabase.from('rangers_comptes').select('montant,operation'),
         supabase.from('enquetes').select('*',{count:'exact',head:true}).in('statut',['en_cours','en_traque']),
       ])
       const soldeCalc=(c||[]).reduce((s,x)=>x.operation==='ajout'?s+Number(x.montant):s-Number(x.montant),0)
@@ -528,8 +528,8 @@ function TabLogistique({snd,ranger}){
   useEffect(()=>{load()},[])
   async function load(){
     const [{data:i},{data:h}]=await Promise.all([
-      supabase.from('logistique').select('*').order('categorie'),
-      supabase.from('logistique_historique').select('*').order('created_at',{ascending:false}).limit(60),
+      supabase.from('rangers_logistique').select('*').order('categorie'),
+      supabase.from('rangers_logistique_histo').select('*').order('created_at',{ascending:false}).limit(60),
     ])
     setItems(i||[]);setHisto(h||[]);setLoading(false)
   }
@@ -539,7 +539,7 @@ function TabLogistique({snd,ranger}){
   async function save(){
     snd.carriageReturn()
     if(!form.article){setMsg('⚠ Article requis');return}
-    const{error}=editItem?await supabase.from('logistique').update(form).eq('id',editItem.id):await supabase.from('logistique').insert(form)
+    const{error}=editItem?await supabase.from('rangers_logistique').update(form).eq('id',editItem.id):await supabase.from('rangers_logistique').insert(form)
     if(error){setMsg('⚠ '+error.message);return}
     snd.ding();await load();setPage('list')
   }
@@ -550,12 +550,12 @@ function TabLogistique({snd,ranger}){
     const qteAvant=editItem[col]||0
     const delta=mouv.type==='ajout'?Number(mouv.quantite):-Number(mouv.quantite)
     const qteApres=Math.max(0,qteAvant+delta)
-    const{error}=await supabase.from('logistique').update({[col]:qteApres}).eq('id',editItem.id)
+    const{error}=await supabase.from('rangers_logistique').update({[col]:qteApres}).eq('id',editItem.id)
     if(error){setMsg('⚠ '+error.message);return}
-    await supabase.from('logistique_historique').insert({article_id:editItem.id,article_nom:editItem.article,poste:mouv.poste,type_mouv:mouv.type,quantite:Number(mouv.quantite),qte_avant:qteAvant,qte_apres:qteApres,ranger_bp:ranger?.bp,ranger_nom:ranger?`${ranger.prenom_rp} ${ranger.nom_rp}`:null})
+    await supabase.from('rangers_logistique_histo').insert({article_id:editItem.id,article_nom:editItem.article,poste:mouv.poste,type_mouv:mouv.type,quantite:Number(mouv.quantite),qte_avant:qteAvant,qte_apres:qteApres,ranger_bp:ranger?.bp,ranger_nom:ranger?`${ranger.prenom_rp} ${ranger.nom_rp}`:null})
     snd.ding();await load();setPage('list')
   }
-  async function del(id){if(!confirm('Supprimer ?'))return;snd.carriageReturn();await supabase.from('logistique').delete().eq('id',id);await load()}
+  async function del(id){if(!confirm('Supprimer ?'))return;snd.carriageReturn();await supabase.from('rangers_logistique').delete().eq('id',id);await load()}
   const CATS=['Papeterie','Armurerie','Fourniture','Alimentaire','Soins']
   const POSTES=[{id:'strawberry',label:'Strawberry'},{id:'blackwater',label:'Blackwater'},{id:'valentine',label:'Valentine'}]
 
@@ -687,14 +687,14 @@ function TabArmes({snd,ranger,isAdmin}){
   const [page,setPage]=useState('list')
   const [editArme,setEditArme]=useState(null)
   const [rangers,setRangers]=useState([])
-  const [form,setForm]=useState({type_arme:'',numero_serie:'',date_fabrication:'',emplacement:'Registre Blackwater',statut:'en_stock',affecte_a:'',nom_affecte:''})
+  const [form,setForm]=useState({type_arme:'',numero_serie:'',date_entree:'',emplacement:'Registre Blackwater',statut:'en_stock',affecte_a:'',nom_affecte:''})
   const [msg,setMsg]=useState('')
   const [tooltip,setTooltip]=useState({show:false,text:'',x:0,y:0})
 
   useEffect(()=>{load()},[])
   async function load(){
     const [{data:a},{data:r}]=await Promise.all([
-      supabase.from('stock_armes').select('*').eq('origine','rangers').order('type_arme').order('type_arme'),
+      supabase.from('rangers_armes').select('*').order('type_arme').order('type_arme'),
       supabase.from('rangers').select('id,prenom_rp,nom_rp').eq('statut','actif'),
     ])
     setArmes(a||[]);setRangers(r||[]);setLoading(false)
@@ -702,11 +702,11 @@ function TabArmes({snd,ranger,isAdmin}){
 
   const canModifyAffect = isAdmin || ['commandant','lieutenant','sergent'].includes(ranger?.grade)
 
-  function openAdd(){snd.keyClick();setEditArme(null);setForm({type_arme:'',numero_serie:'',date_fabrication:'',emplacement:'Registre Blackwater',statut:'en_stock',affecte_a:'',nom_affecte:''});setMsg('');setPage('add')}
+  function openAdd(){snd.keyClick();setEditArme(null);setForm({type_arme:'',numero_serie:'',date_entree:'',emplacement:'Registre Blackwater',statut:'en_stock',affecte_a:'',nom_affecte:''});setMsg('');setPage('add')}
   function openEdit(a){
     if(!canModifyAffect)return
     snd.keyClick();setEditArme(a)
-    setForm({type_arme:a.type_arme,numero_serie:a.numero_serie,date_fabrication:a.date_fabrication||'',emplacement:a.emplacement||'',statut:a.statut,affecte_a:a.affecte_a||'',nom_affecte:a.ranger?`${a.ranger.prenom_rp} ${a.ranger.nom_rp}`:''})
+    setForm({type_arme:a.type_arme,numero_serie:a.numero_serie,date_entree:a.date_entree||'',emplacement:a.emplacement||'',statut:a.statut,affecte_a:a.affecte_a||'',nom_affecte:a.ranger?`${a.ranger.prenom_rp} ${a.ranger.nom_rp}`:''})
     setMsg('');setPage('edit')
   }
 
@@ -716,19 +716,19 @@ function TabArmes({snd,ranger,isAdmin}){
     const rangerSelectionne = rangers.find(r=>r.id===form.affecte_a)
     const payload={
       type_arme:form.type_arme,numero_serie:form.numero_serie,
-      date_fabrication:form.date_fabrication||null,
+      date_entree:form.date_entree||null,
       emplacement:form.statut==='affectee'?null:form.emplacement,
       statut:form.statut,
       affecte_a:form.statut==='affectee'?form.affecte_a||null:null,
       nom_affecte:form.statut==='affectee'&&rangerSelectionne?`${rangerSelectionne.prenom_rp} ${rangerSelectionne.nom_rp}`:null,
       origine:'rangers',
     }
-    const{error}=editArme?await supabase.from('stock_armes').update(payload).eq('id',editArme.id):await supabase.from('stock_armes').insert(payload)
+    const{error}=editArme?await supabase.from('rangers_armes').update(payload).eq('id',editArme.id):await supabase.from('rangers_armes').insert(payload)
     if(error){setMsg('⚠ '+error.message);return}
     snd.ding();await load();setPage('list')
   }
 
-  async function del(id){if(!confirm('Supprimer ?'))return;snd.carriageReturn();await supabase.from('stock_armes').delete().eq('id',id);await load()}
+  async function del(id){if(!confirm('Supprimer ?'))return;snd.carriageReturn();await supabase.from('rangers_armes').delete().eq('id',id);await load()}
 
   const TYPES=['Cattleman','Navy','Winchester','Springfield','Pompe','Verrou','Rolling Block','Autre']
   const EMPLACEMENTS=['Bureau Blackwater','Bureau Strawberry','Bureau Valentine']
@@ -749,7 +749,7 @@ function TabArmes({snd,ranger,isAdmin}){
           <Field label="N° de série"><input type="text" value={form.numero_serie} onChange={e=>{setForm(f=>({...f,numero_serie:e.target.value}));snd.keyClick()}} placeholder="147600"/></Field>
         </div>
         <div className="two-col">
-          <Field label="Date fabrication"><input type="date" value={form.date_fabrication} onChange={e=>{setForm(f=>({...f,date_fabrication:e.target.value}));snd.keyClick()}}/></Field>
+          <Field label="Date fabrication"><input type="date" value={form.date_entree} onChange={e=>{setForm(f=>({...f,date_entree:e.target.value}));snd.keyClick()}}/></Field>
           <Field label="Statut">
             <select value={form.statut} onChange={e=>{setForm(f=>({...f,statut:e.target.value}));snd.keyClick()}}>
               <option value="en_stock">En stock</option>
@@ -813,7 +813,7 @@ function TabArmes({snd,ranger,isAdmin}){
               <tr key={a.id} style={a.statut==='volee'?{background:'rgba(139,26,26,.06)'}:{}}>
                 <td><strong>{a.type_arme}</strong></td>
                 <td style={{letterSpacing:'2px',fontSize:'11px'}}>{a.numero_serie}</td>
-                <td style={{fontSize:'10px'}}>{a.date_fabrication?new Date(a.date_fabrication).toLocaleDateString('fr-FR'):'—'}</td>
+                <td style={{fontSize:'10px'}}>{a.date_entree?new Date(a.date_entree).toLocaleDateString('fr-FR'):'—'}</td>
                 <td>
                   {a.statut==='affectee'&&a.nom_affecte?(
                     <span
@@ -858,7 +858,7 @@ function TabComptes({snd,ranger}){
   const [msg,setMsg]=useState('')
   useEffect(()=>{load()},[])
   async function load(){
-    const{data}=await supabase.from('comptes').select('*').eq('origine','rangers').order('date_op',{ascending:false}).limit(60).order('date_op',{ascending:false}).limit(60)
+    const{data}=await supabase.from('rangers_comptes').select('*').order('date_op',{ascending:false}).limit(60).order('date_op',{ascending:false}).limit(60)
     const d=data||[];setOps(d);setSolde(d.reduce((s,r)=>r.operation==='ajout'?s+Number(r.montant):s-Number(r.montant),0));setLoading(false)
   }
   function openPage(t){snd.keyClick();setType(t);setForm({type_op:'Règlement de facture',autre_precis:'',description:'',nom_prenom:'',montant:'',secteur:'Blackwater'});setMsg('');setPage('form')}
@@ -869,7 +869,7 @@ function TabComptes({snd,ranger}){
     const objet=isAutre?(form.autre_precis||'Autre'):(form.description||form.type_op)
     const typePermis=isAutre?(form.autre_precis||'Autre'):form.type_op
     if(!objet){setMsg('⚠ Description requise');return}
-    const{error}=await supabase.from('comptes').insert({objet,nom_prenom:form.nom_prenom||null,type_permis:typePermis,montant:parseFloat(form.montant),operation:type,date_op:new Date().toISOString().split('T')[0],enregistre_par:ranger?.id,enregistre_par_nom:ranger?`${ranger.prenom_rp} ${ranger.nom_rp}`:null,secteur:form.secteur||'Blackwater',origine:'rangers'})
+    const{error}=await supabase.from('rangers_comptes').insert({objet,nom_prenom:form.nom_prenom||null,type_permis:typePermis,montant:parseFloat(form.montant),operation:type,date_op:new Date().toISOString().split('T')[0],enregistre_par:ranger?.id,enregistre_nom:ranger?`${ranger.prenom_rp} ${ranger.nom_rp}`:null,secteur:form.secteur||'Blackwater'})
     if(error){setMsg('⚠ '+error.message);return}
     snd.ding();await load();setPage('list')
   }
@@ -947,7 +947,7 @@ function TabComptes({snd,ranger}){
                 <td style={{fontSize:'10px'}}><span style={{border:'1px solid rgba(26,58,106,.3)',padding:'1px 5px',fontFamily:"'Special Elite',cursive",fontSize:'8px',letterSpacing:'1px'}}>{op.secteur||'—'}</span></td>
                 <td style={{fontSize:'11px'}}>{op.objet}</td>
                 <td style={{fontSize:'10px'}}>{op.nom_prenom||'—'}</td>
-                <td style={{fontSize:'10px'}}>{op.enregistre_par_nom||'—'}</td>
+                <td style={{fontSize:'10px'}}>{op.enregistre_nom||'—'}</td>
                 <td style={{fontWeight:700}}>{Number(op.montant).toFixed(2)} $</td>
                 <td><span className={`status-badge ${op.operation==='ajout'?'status-ok':'status-vol'}`} style={{border:'1px solid',padding:'1px 5px',fontSize:'9px',fontFamily:"'Special Elite',cursive"}}>{op.operation==='ajout'?'Ajout':'Retrait'}</span></td>
               </tr>
@@ -970,12 +970,12 @@ function TabRapports({ranger,snd}){
   const [form,setForm]=useState({type_rapport:'Déposition',destinataires:'',comtes:'',date_faits:'',contenu:'',elements_supp:''})
   const [msg,setMsg]=useState('')
   useEffect(()=>{load()},[])
-  async function load(){const{data}=await supabase.from('rapports').select('*').eq('origine','U.S. Rangers').order('created_at',{ascending:false});setRapports(data||[]);setLoading(false)}
+  async function load(){const{data}=await supabase.from('rangers_rapports').select('*').order('created_at',{ascending:false});setRapports(data||[]);setLoading(false)}
   async function submit(){
     snd.carriageReturn()
     if(!form.contenu){setMsg('⚠ Contenu obligatoire');return}
     const tel=String(Math.floor(5000+Math.random()*4999))
-    const{error}=await supabase.from('rapports').insert({numero_telegram:tel,type_rapport:form.type_rapport,destinataires:form.destinataires.split('·').map(s=>s.trim()).filter(Boolean),comtes:form.comtes.split('·').map(s=>s.trim()).filter(Boolean),date_faits:form.date_faits||null,contenu:form.contenu,elements_supp:form.elements_supp,redacteur_id:ranger?.id,redacteur_nom:ranger?`${ranger.prenom_rp} ${ranger.nom_rp}`:null,statut:'soumis',origine:'U.S. Rangers'})
+    const{error}=await supabase.from('rangers_rapports').insert({numero_telegram:tel,type_rapport:form.type_rapport,destinataires:form.destinataires.split('·').map(s=>s.trim()).filter(Boolean),comtes:form.comtes.split('·').map(s=>s.trim()).filter(Boolean),date_faits:form.date_faits||null,contenu:form.contenu,elements_supp:form.elements_supp,redacteur_id:ranger?.id,redacteur_nom:ranger?`${ranger.prenom_rp} ${ranger.nom_rp}`:null,statut:'soumis'})
     if(error){setMsg('⚠ '+error.message);return}
     snd.ding();setMsg(`✓ Télégramme n° ${tel}`);await load();setTimeout(()=>{setPage('list');setMsg('')},900)
   }
