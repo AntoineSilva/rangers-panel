@@ -931,15 +931,30 @@ function TabComptes({snd,ranger}){
           </div>
         </div>
       </PageHeader>
-      <div style={{fontFamily:"'Special Elite',cursive",fontSize:'clamp(20px,5vw,34px)',color:'var(--ink)',letterSpacing:'4px',padding:'12px 16px',border:'2px solid var(--ink)',display:'inline-block',position:'relative',marginBottom:'16px'}}>
-        <span style={{position:'absolute',top:'-10px',left:'10px',background:'var(--paper)',padding:'0 6px',fontSize:'9px',letterSpacing:'3px',color:'var(--ink-3)'}}>SOLDE ACTUEL</span>
-        {solde.toFixed(2)} $
+      {/* Cartes soldes par secteur */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:'10px',marginBottom:'18px'}}>
+        {[{key:'all',label:'Global 🌍'},{key:'Blackwater',label:'Blackwater'},{key:'Strawberry',label:'Strawberry'},{key:'Valentine',label:'Valentine'}].map(({key,label})=>{
+          const soldeLocal = ops
+            .filter(o=>key==='all'||(o.secteur||'Blackwater')===key)
+            .reduce((s,o)=>o.operation==='ajout'?s+Number(o.montant):s-Number(o.montant),0)
+          return(
+            <div key={key} onClick={()=>setFiltreSecteur(key)} style={{
+              border:`2px solid ${filtreSecteur===key?'var(--blue)':'rgba(26,58,106,.25)'}`,
+              padding:'12px 14px',
+              background:filtreSecteur===key?'rgba(26,58,106,.1)':'rgba(255,255,255,.35)',
+              cursor:'pointer',transition:'all .2s',position:'relative',
+            }}>
+              <div style={{fontFamily:"'Special Elite',cursive",fontSize:'8px',letterSpacing:'3px',color:'var(--ink-3)',textTransform:'uppercase',marginBottom:'4px'}}>{label}</div>
+              <div style={{fontFamily:"'Special Elite',cursive",fontSize:'20px',fontWeight:700,color:soldeLocal>=0?'var(--blue)':'var(--red)'}}>{soldeLocal.toFixed(2)} $</div>
+            </div>
+          )
+        })}
       </div>
       {loading?<Loader/>:(
         <>
-        {filtreSecteur!=='all'&&<div style={{fontFamily:"'Special Elite',cursive",fontSize:'11px',color:'var(--ink-3)',marginBottom:'8px',fontStyle:'italic'}}>Affichage : secteur {filtreSecteur}</div>}
+        {filtreSecteur!=='all'&&<div style={{fontFamily:"'Special Elite',cursive",fontSize:'11px',color:'var(--ink-3)',marginBottom:'8px',fontStyle:'italic'}}>Secteur : {filtreSecteur}</div>}
         <table className="register-table">
-          <thead><tr><th>Date</th><th>Secteur</th><th>Objet</th><th>Nom</th><th>Par</th><th>Montant</th><th>Op.</th></tr></thead>
+          <thead><tr><th>Date</th><th>Secteur</th><th>Objet</th><th>Nom</th><th>Par</th><th>Montant</th><th>Op.</th><th></th></tr></thead>
           <tbody>
             {ops.filter(op=>filtreSecteur==='all'||op.secteur===filtreSecteur).map(op=>(
               <tr key={op.id}>
@@ -950,9 +965,10 @@ function TabComptes({snd,ranger}){
                 <td style={{fontSize:'10px'}}>{op.enregistre_nom||'—'}</td>
                 <td style={{fontWeight:700}}>{Number(op.montant).toFixed(2)} $</td>
                 <td><span className={`status-badge ${op.operation==='ajout'?'status-ok':'status-vol'}`} style={{border:'1px solid',padding:'1px 5px',fontSize:'9px',fontFamily:"'Special Elite',cursive"}}>{op.operation==='ajout'?'Ajout':'Retrait'}</span></td>
+                <td><button className="btn btn-danger btn-sm" onClick={async()=>{if(!confirm('Supprimer ?'))return;await supabase.from('rangers_comptes').delete().eq('id',op.id);load()}} style={{padding:'2px 6px',fontSize:'8px'}}>✕</button></td>
               </tr>
             ))}
-            {ops.length===0&&<tr><td colSpan="7" style={{textAlign:'center',fontStyle:'italic',color:'var(--ink-3)',padding:'16px'}}>Aucune opération.</td></tr>}
+            {ops.length===0&&<tr><td colSpan="8" style={{textAlign:'center',fontStyle:'italic',color:'var(--ink-3)',padding:'16px'}}>Aucune opération.</td></tr>}
           </tbody>
         </table>
         </>
