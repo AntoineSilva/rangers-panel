@@ -10,7 +10,7 @@ const TABS = [
   { id:'logistique',   label:'Logistique', icon:'📦' },
   { id:'armes',        label:'Armes',      icon:'🔫' },
   { id:'comptes',      label:'Comptes',    icon:'💰' },
-  { id:'rapports',     label:'Rapports',   icon:'📄' },
+  { id:'agents',       label:'Agents',     icon:'🎯' },
   { id:'enquetes',     label:'Enquêtes',   icon:'🔍' },
   { id:'admin',        label:'Admin',      icon:'⚙'  },
 ]
@@ -149,7 +149,7 @@ export default function DashboardPage() {
           {activeTab==='logistique'   && <TabLogistique snd={snd} ranger={ranger}/>}
           {activeTab==='armes'        && <TabArmes snd={snd} ranger={ranger} isAdmin={isAdmin}/>}
           {activeTab==='comptes'      && <TabComptes snd={snd} ranger={ranger}/>}
-          {activeTab==='rapports'     && <TabRapports ranger={ranger} snd={snd}/>}
+          {activeTab==='agents'       && <TabAgents ranger={ranger} snd={snd} isAdmin={isAdmin}/>}
           {activeTab==='enquetes'     && <TabEnquetes ranger={ranger} snd={snd}/>}
           {activeTab==='admin'        && <TabAdmin isAdmin={isAdmin} currentRanger={ranger} snd={snd}/>}
         </div>
@@ -196,7 +196,7 @@ function TabAccueil({ranger,switchTab}){
       </div>
       <div style={{marginTop:'16px',display:'flex',gap:'8px',flexWrap:'wrap'}}>
         <button className="btn btn-primary btn-sm" onClick={()=>switchTab('enquetes')}>🔍 Enquêtes</button>
-        <button className="btn btn-sm" onClick={()=>switchTab('rapports')}>📄 Rapports</button>
+        <button className="btn btn-sm" onClick={()=>switchTab('agents')}>🎯 Agents</button>
         <button className="btn btn-sm" onClick={()=>switchTab('profil')}>👤 Mon profil</button>
       </div>
     </div>
@@ -976,87 +976,163 @@ function TabComptes({snd,ranger}){
   )
 }
 
-/* ════════ RAPPORTS ════════ */
-function TabRapports({ranger,snd}){
-  const [rapports,setRapports]=useState([])
+/* ════════ AGENTS — Liste manuelle + formations ════════ */
+const FORMATIONS_DISPO = ['Formation initiale','Négociations','Patrouille','Tir','Investigation','Secourisme','Équitation','Pistage','Combat rapproché','Droit & procédures']
+
+function TabAgents({ranger,snd,isAdmin}){
+  const [agents,setAgents]=useState([])
+  const [rangersList,setRangersList]=useState([])
   const [loading,setLoading]=useState(true)
   const [page,setPage]=useState('list')
-  const [viewRapport,setViewRapport]=useState(null)
-  const [form,setForm]=useState({type_rapport:'Déposition',destinataires:'',comtes:'',date_faits:'',contenu:'',elements_supp:''})
+  const [editAgent,setEditAgent]=useState(null)
+  const [search,setSearch]=useState('')
+  const [mode,setMode]=useState('manuel') // 'manuel' | 'utilisateur'
+  const [form,setForm]=useState({nom:'',ranger_id:'',grade:'',notes:'',formations:[]})
   const [msg,setMsg]=useState('')
+
+  const canGerer = isAdmin || ['commandant','lieutenant','sergent'].includes(ranger?.grade)
+
   useEffect(()=>{load()},[])
-  async function load(){const{data}=await supabase.from('rangers_rapports').select('*').order('created_at',{ascending:false});setRapports(data||[]);setLoading(false)}
-  async function submit(){
-    snd.carriageReturn()
-    if(!form.contenu){setMsg('⚠ Contenu obligatoire');return}
-    const tel=String(Math.floor(5000+Math.random()*4999))
-    const{error}=await supabase.from('rangers_rapports').insert({numero_telegram:tel,type_rapport:form.type_rapport,destinataires:form.destinataires.split('·').map(s=>s.trim()).filter(Boolean),comtes:form.comtes.split('·').map(s=>s.trim()).filter(Boolean),date_faits:form.date_faits||null,contenu:form.contenu,elements_supp:form.elements_supp,redacteur_id:ranger?.id,redacteur_nom:ranger?`${ranger.prenom_rp} ${ranger.nom_rp}`:null,statut:'soumis'})
-    if(error){setMsg('⚠ '+error.message);return}
-    snd.ding();setMsg(`✓ Télégramme n° ${tel}`);await load();setTimeout(()=>{setPage('list');setMsg('')},900)
+  async function load(){
+    const [{data:a},{data:r}]=await Promise.all([
+      supabase.from('rangers_agents').select('*').order('nom'),
+      supabase.from('rangers').select('id,prenom_rp,nom_rp,grade').eq('statut','actif'),
+    ])
+    setAgents(a||[]);setRangersList(r||[]);setLoading(false)
   }
 
-  if(page==='new'){
+  function openAdd(){
+    snd.keyClick();setEditAgent(null);setMode('manuel')
+    setForm({nom:'',ranger_id:'',grade:'',notes:'',formations:[]});setMsg('');setPage('form')
+  }
+  function openEdit(ag){
+    if(!canGerer)return
+    snd.keyClick();setEditAgent(ag);setMode(ag.ranger_id?'utilisateur':'manuel')
+    setForm({nom:ag.nom,ranger_id:ag.ranger_id||'',grade:ag.grade||'',notes:ag.notes||'',formations:ag.formations||[]})
+    setMsg('');setPage('form')
+  }
+
+  function toggleFormation(f){
+    snd.keyClick()
+    setForm(s=>({...s,formations:s.formations.includes(f)?s.formations.filter(x=>x!==f):[...s.formations,f]}))
+  }
+
+  async function save(){
+    snd.carriageReturn()
+    if(mode==='utilisateur'){
+      if(!form.ranger_id){setMsg('⚠ Sélectionnez un utilisateur');return}
+      const r=rangersList.find(x=>x.id===form.ranger_id)
+      const payload={nom:`${r.prenom_rp} ${r.nom_rp}`,ranger_id:r.id,grade:r.grade,notes:form.notes||null,formations:form.formations,ajoute_par:ranger?.id}
+      const{error}=editAgent?await supabase.from('rangers_agents').update(payload).eq('id',editAgent.id):await supabase.from('rangers_agents').insert(payload)
+      if(error){setMsg('⚠ '+error.message);return}
+    }else{
+      if(!form.nom){setMsg('⚠ Nom requis');return}
+      const payload={nom:form.nom,ranger_id:null,grade:form.grade||null,notes:form.notes||null,formations:form.formations,ajoute_par:ranger?.id}
+      const{error}=editAgent?await supabase.from('rangers_agents').update(payload).eq('id',editAgent.id):await supabase.from('rangers_agents').insert(payload)
+      if(error){setMsg('⚠ '+error.message);return}
+    }
+    snd.ding();await load();setPage('list')
+  }
+
+  async function del(id){
+    if(!confirm('Retirer cet agent du registre ?'))return
+    snd.carriageReturn();await supabase.from('rangers_agents').delete().eq('id',id);await load()
+  }
+
+  const filtered = agents.filter(a=>a.nom.toLowerCase().includes(search.toLowerCase()))
+
+  if(page==='form'){
     return(
-      <SlidePage title="Nouveau Rapport Officiel" onClose={()=>setPage('list')} wide>
-        {msg&&<div className={msg.startsWith('⚠')?'msg-error':'msg-success'}>{msg}</div>}
-        <div className="two-col">
-          <Field label="Type de rapport">
-            <select value={form.type_rapport} onChange={e=>{setForm(f=>({...f,type_rapport:e.target.value}));snd.keyClick()}}>
-              {['Déposition','Rapport d\'intervention','Rapport de patrouille','Rapport d\'incident','Note interne'].map(t=><option key={t}>{t}</option>)}
+      <SlidePage title={editAgent?`Modifier — ${editAgent.nom}`:'Nouvel agent'} onClose={()=>setPage('list')}>
+        {msg&&<div className="msg-error">{msg}</div>}
+
+        {!editAgent&&(
+          <div className="field-group" style={{marginBottom:'16px'}}>
+            <label>Type d'agent</label>
+            <div style={{display:'flex',gap:'8px',marginTop:'6px'}}>
+              <button className={`btn btn-sm ${mode==='manuel'?'btn-primary':''}`} onClick={()=>{snd.keyClick();setMode('manuel')}}>✎ Nom manuel</button>
+              <button className={`btn btn-sm ${mode==='utilisateur'?'btn-primary':''}`} onClick={()=>{snd.keyClick();setMode('utilisateur')}}>👤 Utilisateur du site</button>
+            </div>
+          </div>
+        )}
+
+        {mode==='utilisateur'?(
+          <Field label="Sélectionner un utilisateur ★">
+            <select value={form.ranger_id} onChange={e=>{setForm(f=>({...f,ranger_id:e.target.value}));snd.keyClick()}}>
+              <option value="">— Choisir —</option>
+              {rangersList.map(r=><option key={r.id} value={r.id}>{r.prenom_rp} {r.nom_rp} ({r.grade})</option>)}
             </select>
           </Field>
-          <Field label="Date des faits"><input type="text" placeholder="14/04/1905 — 20h00" value={form.date_faits} onChange={e=>{setForm(f=>({...f,date_faits:e.target.value}));snd.keyClick()}}/></Field>
-        </div>
-        <div className="two-col">
-          <Field label="Destinataires (séparés par ·)"><input type="text" placeholder="Bureau West Elizabeth · U.S. Marshals" value={form.destinataires} onChange={e=>{setForm(f=>({...f,destinataires:e.target.value}));snd.keyClick()}}/></Field>
-          <Field label="Comtés (séparés par ·)"><input type="text" placeholder="West Elizabeth · Tall Trees" value={form.comtes} onChange={e=>{setForm(f=>({...f,comtes:e.target.value}));snd.keyClick()}}/></Field>
-        </div>
-        <Field label="Contenu de la déposition ★">
-          <textarea value={form.contenu} onChange={e=>{setForm(f=>({...f,contenu:e.target.value}));snd.keyClick()}} placeholder="Je soussigné(e)..." style={{minHeight:'160px'}}/>
-        </Field>
-        <Field label="Éléments supplémentaires / Pièces à conviction">
-          <textarea style={{minHeight:'70px'}} value={form.elements_supp} onChange={e=>{setForm(f=>({...f,elements_supp:e.target.value}));snd.keyClick()}} placeholder="Photos, références..."/>
-        </Field>
-        <div className="btn-row"><button className="btn btn-primary" onClick={submit}>▶ Soumettre le rapport</button><button className="btn" onClick={()=>setPage('list')}>✕ Annuler</button></div>
-      </SlidePage>
-    )
-  }
+        ):(
+          <div className="two-col">
+            <Field label="Nom complet ★"><input type="text" value={form.nom} onChange={e=>{setForm(f=>({...f,nom:e.target.value}));snd.keyClick()}} placeholder="Prénom Nom"/></Field>
+            <Field label="Grade (optionnel)"><input type="text" value={form.grade} onChange={e=>{setForm(f=>({...f,grade:e.target.value}));snd.keyClick()}} placeholder="ex: Deputy, Confirmé..."/></Field>
+          </div>
+        )}
 
-  if(page==='view'&&viewRapport){
-    return(
-      <SlidePage title={`Rapport — Télégramme n° ${viewRapport.numero_telegram}`} onClose={()=>setPage('list')} wide>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px',marginBottom:'14px',padding:'10px',background:'rgba(180,150,80,.06)',border:'1px solid rgba(160,130,70,.3)'}}>
-          <div><div style={{fontSize:'8px',letterSpacing:'2px',color:'var(--ink-3)',textTransform:'uppercase',marginBottom:'2px'}}>Type</div><div style={{fontFamily:"'Special Elite',cursive",fontSize:'12px'}}>{viewRapport.type_rapport}</div></div>
-          <div><div style={{fontSize:'8px',letterSpacing:'2px',color:'var(--ink-3)',textTransform:'uppercase',marginBottom:'2px'}}>Date des faits</div><div style={{fontSize:'12px'}}>{viewRapport.date_faits||'—'}</div></div>
-          <div><div style={{fontSize:'8px',letterSpacing:'2px',color:'var(--ink-3)',textTransform:'uppercase',marginBottom:'2px'}}>Rédacteur</div><div style={{fontFamily:"'Special Elite',cursive",fontSize:'12px'}}>{viewRapport.redacteur_nom||'—'}</div></div>
-          <div><div style={{fontSize:'8px',letterSpacing:'2px',color:'var(--ink-3)',textTransform:'uppercase',marginBottom:'2px'}}>Statut</div><div style={{fontSize:'12px'}}>{viewRapport.statut}</div></div>
+        <Field label="Notes (optionnel)">
+          <textarea value={form.notes} onChange={e=>{setForm(f=>({...f,notes:e.target.value}));snd.keyClick()}} placeholder="Observations diverses..." style={{minHeight:'70px'}}/>
+        </Field>
+
+        <div className="field-group">
+          <label>Formations suivies</label>
+          <div style={{display:'flex',flexWrap:'wrap',gap:'6px',marginTop:'8px'}}>
+            {FORMATIONS_DISPO.map(f=>(
+              <label key={f} className={`comp-tag ${form.formations.includes(f)?'active':''}`} style={{cursor:'pointer'}} onClick={()=>toggleFormation(f)}>
+                {form.formations.includes(f)?'✓ ':''}{f}
+              </label>
+            ))}
+          </div>
         </div>
-        <div style={{borderTop:'2px solid var(--ink)',paddingTop:'14px',whiteSpace:'pre-wrap',fontStyle:'italic',fontSize:'13px',lineHeight:'28px',color:'var(--ink-2)'}}>{viewRapport.contenu}</div>
-        {viewRapport.elements_supp&&<div style={{marginTop:'14px',borderTop:'1px solid rgba(106,74,26,.3)',paddingTop:'10px',fontSize:'11px',color:'var(--ink-3)'}}><strong style={{fontFamily:"'Special Elite',cursive",letterSpacing:'2px',fontSize:'9px',textTransform:'uppercase'}}>Éléments supplémentaires</strong><br/>{viewRapport.elements_supp}</div>}
+
+        <div className="btn-row">
+          <button className="btn btn-primary" onClick={save}>★ Enregistrer</button>
+          <button className="btn" onClick={()=>setPage('list')}>✕ Annuler</button>
+        </div>
       </SlidePage>
     )
   }
 
   return(
     <div className="page-in">
-      <PageHeader title="Rapports" sub="Registre officiel — West Elizabeth">
-        <button className="btn btn-primary btn-sm" onClick={()=>{snd.keyClick();setForm({type_rapport:'Déposition',destinataires:'',comtes:'',date_faits:'',contenu:'',elements_supp:''});setMsg('');setPage('new')}}>+ Rédiger</button>
+      <PageHeader title="Agents" sub="Registre des agents — West Elizabeth">
+        {canGerer&&<button className="btn btn-primary btn-sm" onClick={openAdd}>+ Agent</button>}
       </PageHeader>
-      {loading?<Loader/>:(
+
+      <div className="field-group" style={{marginBottom:'16px'}}>
+        <label>Rechercher un agent</label>
+        <input type="text" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Nom..."/>
+      </div>
+
+      {loading?<Loader/>:filtered.length===0?(
+        <div style={{textAlign:'center',padding:'24px',fontStyle:'italic',color:'var(--ink-3)',border:'1px dashed rgba(26,58,106,.25)'}}>
+          Aucun agent enregistré. {canGerer&&'Cliquez sur + Agent.'}
+        </div>
+      ):(
         <table className="register-table">
-          <thead><tr><th>N° Télég.</th><th>Date</th><th>Type</th><th>Rédacteur</th><th>Statut</th><th></th></tr></thead>
+          <thead><tr><th>Nom</th><th>Grade</th><th>Type</th><th>Formations</th><th>Notes</th>{canGerer&&<th></th>}</tr></thead>
           <tbody>
-            {rapports.map(r=>(
-              <tr key={r.id}>
-                <td style={{letterSpacing:'2px',fontWeight:700}}>{r.numero_telegram}</td>
-                <td style={{fontSize:'10px'}}>{r.date_faits?new Date(r.date_faits).toLocaleDateString('fr-FR'):'—'}</td>
-                <td>{r.type_rapport}</td>
-                <td style={{fontSize:'10px'}}>{r.redacteur_nom||'—'}</td>
-                <td><span className={`status-badge ${r.statut==='archive'?'status-ok':'status-att'}`}>{r.statut}</span></td>
-                <td><button className="btn btn-sm" onClick={()=>{snd.keyClick();setViewRapport(r);setPage('view')}}>▶ Lire</button></td>
+            {filtered.map(a=>(
+              <tr key={a.id}>
+                <td style={{fontFamily:"'Special Elite',cursive",fontWeight:700}}>{a.nom}</td>
+                <td>{a.grade?<span className={`grade-badge grade-${a.grade}`}>{a.grade}</span>:'—'}</td>
+                <td><span className={`status-badge ${a.ranger_id?'status-ok':'status-info'}`}>{a.ranger_id?'Inscrit':'Manuel'}</span></td>
+                <td>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:'3px',maxWidth:'260px'}}>
+                    {(a.formations||[]).length>0?a.formations.map(f=>(
+                      <span key={f} className="comp-tag active" style={{fontSize:'7px'}}>{f}</span>
+                    )):<span style={{fontSize:'10px',color:'var(--ink-3)',fontStyle:'italic'}}>Aucune</span>}
+                  </div>
+                </td>
+                <td style={{fontSize:'10px',color:'var(--ink-3)',fontStyle:'italic',maxWidth:'140px'}}>{a.notes||'—'}</td>
+                {canGerer&&<td>
+                  <div style={{display:'flex',gap:'4px'}}>
+                    <button className="btn btn-sm" onClick={()=>openEdit(a)}>✎</button>
+                    <button className="btn btn-danger btn-sm" onClick={()=>del(a.id)}>✕</button>
+                  </div>
+                </td>}
               </tr>
             ))}
-            {rapports.length===0&&<tr><td colSpan="6" style={{textAlign:'center',fontStyle:'italic',color:'var(--ink-3)',padding:'16px'}}>Aucun rapport.</td></tr>}
           </tbody>
         </table>
       )}
